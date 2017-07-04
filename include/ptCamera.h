@@ -15,6 +15,7 @@
 #include "ptMaterial.h"
 #include "ptVector3.h"
 #include "ptRay.h"
+#include "ptRNG.h"
 
 class Camera {
 public:
@@ -54,11 +55,11 @@ public:
         vertical = 2 * halfHeight * focal_dist * v;
     }
 
-    COMMON_FUNC Rayf getRay(float s, float t, unsigned int *seed0, unsigned int *seed1)
+    COMMON_FUNC Rayf getRay(float s, float t, RNG& rng)
     {
-        Vector3f rd = lens_radius * randomInUnitDisk(seed0, seed1);
+        Vector3f rd = lens_radius * randomInUnitDisk(rng);
         Vector3f offset = u * rd.x() + v * rd.y();
-        float time = time0 + rand(seed0, seed1) * (time1 - time0);
+        float time = time0 + rng.rand() * (time1 - time0);
         return Rayf(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset, time);
     }
 

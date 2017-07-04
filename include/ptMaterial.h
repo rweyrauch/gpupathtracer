@@ -12,7 +12,7 @@
 
 #include <math_constants.h>
 #include "ptCudaCommon.h"
-#include "ptPDF.h"
+#include "ptRNG.h"
 #include "ptVector3.h"
 #include "ptRay.h"
 #include "ptHitable.h"
@@ -36,19 +36,19 @@ COMMON_FUNC float rand(unsigned int *seed0, unsigned int *seed1)
     return (res.f - 2.0f) / 2.0f;
 }
 
-COMMON_FUNC inline Vector3f randomInUnitSphere(unsigned int *seed0, unsigned int *seed1)
+COMMON_FUNC inline Vector3f randomInUnitSphere(RNG& rng)
 {
-    const float phi = rand(seed0, seed1) * 2.0f * CUDART_PI_F;
-    const float z = 1.0f - 2.0f * rand(seed0, seed1);
-    const float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
-    return Vector3f(r * cosf(phi), r * sinf(phi), z);
+    const float phi = rng.rand() * 2 * M_PI;
+    const float z = 1 - 2 * rng.rand();
+    const float r = Sqrt(Max(0, 1 - z * z));
+    return Vector3f(r * Cos(phi), r * Sin(phi), z);
 }
 
-COMMON_FUNC inline Vector3f randomInUnitDisk(unsigned int *seed0, unsigned int *seed1)
+COMMON_FUNC inline Vector3f randomInUnitDisk(RNG& rng)
 {
-    const float r = sqrtf(rand(seed0, seed1));
-    const float theta = rand(seed0, seed1) * 2.0f * CUDART_PI_F;
-    return Vector3f(r * cosf(theta), r * sinf(theta), 0.0f);
+    const float r = Sqrt(rng.rand());
+    const float theta = rng.rand() * 2 * M_PI;
+    return Vector3f(r * Cos(theta), r * Sin(theta), 0);
 }
 
 template <typename T>
@@ -64,7 +64,7 @@ class Material
 public:
     COMMON_FUNC virtual ~Material() {}
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const = 0;
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, RNG& rng) const = 0;
     COMMON_FUNC virtual Vector3f emitted(const Vector2f& uv, const Vector3f& p) const { return Vector3f(0.0f, 0.0f, 0.0f); }
 };
 
@@ -74,9 +74,9 @@ public:
     COMMON_FUNC Lambertian(Texture* a) :
         albedo(a) { }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, RNG& rng) const
     {
-        Vector3f target = rec.p + rec.normal * randomInUnitSphere(seed0, seed1);
+        Vector3f target = rec.p + rec.normal * randomInUnitSphere(rng);
         scattered = Rayf(rec.p, target-rec.p);
         attenuation = albedo->value(rec.uv, rec.p);
         return true;
@@ -96,10 +96,10 @@ public:
         if (f < 1) { fuzz = f; }
     }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, RNG& rng) const
     {
         Vector3f reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-        scattered = Rayf(rec.p, reflected+fuzz*randomInUnitSphere(seed0, seed1));
+        scattered = Rayf(rec.p, reflected+fuzz*randomInUnitSphere(rng));
         attenuation = albedo;
         return (dot(scattered.direction(), rec.normal) > 0.0f);
     }
@@ -115,7 +115,7 @@ public:
     COMMON_FUNC Dielectric(float ri) :
         refIndex(ri) { }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, RNG& rng) const
     {
         Vector3f outwardNormal;
         Vector3f reflected = reflect(r_in.direction(), rec.normal);
@@ -143,7 +143,7 @@ public:
         {
             reflectProb = 1.0f;
         }
-        if (rand(seed0, seed1) < reflectProb)
+        if (rng.rand() < reflectProb)
         {
             scattered = Rayf(rec.p, reflected);
         }
@@ -164,7 +164,7 @@ public:
     COMMON_FUNC DiffuseLight(Texture* a) :
         emit(a) {}
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, RNG& rng) const
     {
         return false;
     }

@@ -15,6 +15,7 @@
 #include <vector>
 //#include "ptAABB.h"
 //#include "ptRectangle.h"
+#include "ptRNG.h"
 #include "ptSphere.h"
 #include "ptHitableList.h"
 #include "ptAmbientLight.h"
@@ -37,7 +38,7 @@ const int MAX_DEPTH = 5;
     Camera g_cam;
 #endif
 
-COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, unsigned int *seed0, unsigned int *seed1)
+COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, RNG& rng)
 {
     Vector3f accumCol(1, 1, 1);
     Vector3f attenuation(0, 0, 0);
@@ -50,7 +51,7 @@ COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, unsigned int *seed0, u
         if (world->hit(currentRay, 0.001f, FLT_MAX, rec))
         {
             Rayf scattered;
-            if (rec.material->scatter(currentRay, rec, attenuation, scattered, seed0, seed1))
+            if (rec.material->scatter(currentRay, rec, attenuation, scattered, rng))
             {
                 accumCol *= attenuation;
                 currentRay = scattered;
@@ -133,15 +134,15 @@ COMMON_FUNC Vector3f color_nr(const Ray<float>& r, Hitable* world, Hitable* ligh
 }
 */
 
-COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny, int ns, unsigned int* seed0, unsigned int* seed1)
+COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny, int ns, RNG& rng)
 {
     Vector3f accumCol(0, 0, 0);
     for (int s = 0; s < ns; s++)
     {
-        float u = (x + rand(seed0, seed1)) / float(nx);
-        float v = (y + rand(seed0, seed1)) / float(ny);
-        Rayf r = g_cam.getRay(u, v, seed0, seed1);
-        accumCol += color(r, *world, seed0, seed1);
+        float u = (x + rng.rand()) / float(nx);
+        float v = (y + rng.rand()) / float(ny);
+        Rayf r = g_cam.getRay(u, v, rng);
+        accumCol += color(r, *world, rng);
     }
     accumCol /= float(ns);
     accumCol[0] = sqrtf(accumCol[0]);
@@ -162,7 +163,8 @@ __global__ void render_kernel(float3* pOutImage, Hitable** world, int nx, int ny
 
     unsigned int seed0 = x;  // seeds for random number generator
     unsigned int seed1 = y;
-    Vector3f accumCol = render_pixel(world, x, y, nx, ny, ns, &seed0, &seed1);
+    SimpleRng rng(seed0, seed1);
+    Vector3f accumCol = render_pixel(world, x, y, nx, ny, ns, rng);
 
     pOutImage[i] = make_float3(accumCol[0], accumCol[1], accumCol[2]);
 }
@@ -285,11 +287,11 @@ inline Vector3f deNan(const Vector3f& c)
     return temp;
 }
 
-void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, unsigned int *seed0, unsigned int *seed1)
+void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, RNG& rng)
 {
     for (int x = 0; x < nx; x++)
     {
-        outLine[x] = render_pixel(&world, x, line, nx, ny, ns, seed0, seed1);
+        outLine[x] = render_pixel(&world, x, line, nx, ny, ns, rng);
     }
 }
 
@@ -379,6 +381,7 @@ int main(int argc, char** argv)
 
         unsigned int seed0 = 42;
         unsigned int seed1 = 13;
+        SimpleRng rng(seed0, seed1);
 
         Progress progress(nx*ny, "PathTracers");
 
@@ -387,7 +390,7 @@ int main(int argc, char** argv)
         {
             Vector3f* outLine = outImage + (nx * j);
             const int line = ny - j - 1;
-            renderLine(line, outLine, nx, ny, ns, cam, world, &seed0, &seed1);
+            renderLine(line, outLine, nx, ny, ns, cam, world, rng);
 
             #pragma omp critical(progress)
             {
