@@ -16,24 +16,6 @@
 #include "ptRNG.h"
 #include "ptHitable.h"
 
-COMMON_FUNC float rand(unsigned int *seed0, unsigned int *seed1)
-{
-    *seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);  // hash the seeds using bitwise AND and bitshifts
-    *seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
-
-    unsigned int ires = ((*seed0) << 16) + (*seed1);
-
-    // Convert to float
-    union {
-        float f;
-        unsigned int ui;
-    } res;
-
-    res.ui = (ires & 0x007fffff) | 0x40000000;  // bitwise AND, bitwise OR
-
-    return (res.f - 2.0f) / 2.0f;
-}
-
 COMMON_FUNC inline Vector3f randomInUnitSphere(RNG* rng)
 {
     const float phi = rng->rand() * 2 * M_PI;
@@ -117,11 +99,13 @@ public:
 
     COMMON_FUNC virtual float value(const Vector3f& direction) const
     {
-        return hitable->pdfValue(origin, direction);
+        //return hitable->pdfValue(origin, direction);
+        return 0.0f;
     }
     COMMON_FUNC virtual Vector3f generate(RNG* rng) const
     {
-        return hitable->random(origin, rng);
+        //return hitable->random(origin, rng);
+        return origin;
     }
 
 private:

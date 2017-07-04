@@ -10,6 +10,7 @@
 #ifndef PATHTRACER_MATERIAL_H
 #define PATHTRACER_MATERIAL_H
 
+#include <math_constants.h>
 #include "ptCudaCommon.h"
 #include "ptPDF.h"
 #include "ptVector3.h"
@@ -17,13 +18,38 @@
 #include "ptHitable.h"
 #include "ptTexture.h"
 
-struct ScatterRecord
+COMMON_FUNC float rand(unsigned int *seed0, unsigned int *seed1)
 {
-    Rayf specularRay;
-    bool isSpecular;
-    Vector3f attenuation;
-    Pdf* pdf;
-};
+    *seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);  // hash the seeds using bitwise AND and bitshifts
+    *seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
+
+    unsigned int ires = ((*seed0) << 16) + (*seed1);
+
+    // Convert to float
+    union {
+        float f;
+        unsigned int ui;
+    } res;
+
+    res.ui = (ires & 0x007fffff) | 0x40000000;  // bitwise AND, bitwise OR
+
+    return (res.f - 2.0f) / 2.0f;
+}
+
+COMMON_FUNC inline Vector3f randomInUnitSphere(unsigned int *seed0, unsigned int *seed1)
+{
+    const float phi = rand(seed0, seed1) * 2.0f * CUDART_PI_F;
+    const float z = 1.0f - 2.0f * rand(seed0, seed1);
+    const float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+    return Vector3f(r * cosf(phi), r * sinf(phi), z);
+}
+
+COMMON_FUNC inline Vector3f randomInUnitDisk(unsigned int *seed0, unsigned int *seed1)
+{
+    const float r = sqrtf(rand(seed0, seed1));
+    const float theta = rand(seed0, seed1) * 2.0f * CUDART_PI_F;
+    return Vector3f(r * cosf(theta), r * sinf(theta), 0.0f);
+}
 
 template <typename T>
 COMMON_FUNC inline T schlick(T cs, T ri)
@@ -36,15 +62,10 @@ COMMON_FUNC inline T schlick(T cs, T ri)
 class Material
 {
 public:
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG* rng) const = 0;
-    COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const
-    {
-        return 0;
-    }
-    COMMON_FUNC virtual Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const
-    {
-        return Vector3f(0, 0, 0);
-    }
+    COMMON_FUNC virtual ~Material() {}
+
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const = 0;
+    COMMON_FUNC virtual Vector3f emitted(const Vector2f& uv, const Vector3f& p) const { return Vector3f(0.0f, 0.0f, 0.0f); }
 };
 
 class Lambertian : public Material
@@ -53,18 +74,12 @@ public:
     COMMON_FUNC Lambertian(Texture* a) :
         albedo(a) { }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG* rng) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
     {
-        srec.isSpecular = false;
-        srec.attenuation = albedo->value(rec.uv, rec.p);
-        srec.pdf = new CosinePdf(rec.normal);
+        Vector3f target = rec.p + rec.normal * randomInUnitSphere(seed0, seed1);
+        scattered = Rayf(rec.p, target-rec.p);
+        attenuation = albedo->value(rec.uv, rec.p);
         return true;
-    }
-    COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const
-    {
-        float cosine = dot(rec.normal, unit_vector(scattered.direction()));
-        if (cosine < 0) return 0;
-        return cosine / M_PI;
     }
 
 private:
@@ -81,14 +96,12 @@ public:
         if (f < 1) { fuzz = f; }
     }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG* rng) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
     {
         Vector3f reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-        srec.specularRay = Rayf(rec.p, reflected + fuzz * randomInUnitSphere(rng));
-        srec.attenuation = albedo;
-        srec.isSpecular = true;
-        srec.pdf = nullptr;
-        return true;
+        scattered = Rayf(rec.p, reflected+fuzz*randomInUnitSphere(seed0, seed1));
+        attenuation = albedo;
+        return (dot(scattered.direction(), rec.normal) > 0.0f);
     }
 
 private:
@@ -102,17 +115,15 @@ public:
     COMMON_FUNC Dielectric(float ri) :
         refIndex(ri) { }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG* rng) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
     {
-        srec.isSpecular = true;
-        srec.pdf = nullptr;
-        srec.attenuation = Vector3f(1, 1, 1);
         Vector3f outwardNormal;
         Vector3f reflected = reflect(r_in.direction(), rec.normal);
+        float niOverNt;
+        attenuation = Vector3f(1.0f, 1.0f, 1.0f);
         Vector3f refracted;
         float reflectProb, cosine;
-        float niOverNt;
-        if (dot(r_in.direction(), rec.normal) > 0)
+        if (dot(r_in.direction(), rec.normal) > 0.0f)
         {
             outwardNormal = -rec.normal;
             niOverNt = refIndex;
@@ -121,7 +132,7 @@ public:
         else
         {
             outwardNormal = rec.normal;
-            niOverNt = 1 / refIndex;
+            niOverNt = 1.0f / refIndex;
             cosine = -dot(r_in.direction(), rec.normal) / r_in.direction().length();
         }
         if (refract(r_in.direction(), outwardNormal, niOverNt, refracted))
@@ -130,15 +141,15 @@ public:
         }
         else
         {
-            reflectProb = 1;
+            reflectProb = 1.0f;
         }
-        if (rng->rand() < reflectProb)
+        if (rand(seed0, seed1) < reflectProb)
         {
-            srec.specularRay = Rayf(rec.p, reflected);
+            scattered = Rayf(rec.p, reflected);
         }
         else
         {
-            srec.specularRay = Rayf(rec.p, refracted);
+            scattered = Rayf(rec.p, refracted);
         }
         return true;
     }
@@ -153,44 +164,17 @@ public:
     COMMON_FUNC DiffuseLight(Texture* a) :
         emit(a) {}
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG* rng) const
+    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, Vector3f& attenuation, Rayf& scattered, unsigned int *seed0, unsigned int *seed1) const
     {
         return false;
     }
-    COMMON_FUNC virtual Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const
+    COMMON_FUNC virtual Vector3f emitted(const Vector2f& uv, const Vector3f& p) const
     {
-        if (dot(rec.normal, r_in.direction()) < 0)
-            return emit->value(uv, p);
-        else
-            return Vector3f(0, 0, 0);
+        return emit->value(uv, p);
     }
 
 private:
     Texture* emit;
-};
-
-class Isotropic : public Material
-{
-public:
-    COMMON_FUNC Isotropic(Texture* a) :
-        albedo(a) {}
-
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG* rng) const
-    {
-        // TODO: fix this for new ScatterRecord
-        srec.isSpecular = false;
-        srec.attenuation = albedo->value(rec.uv, rec.p);
-        srec.pdf = new ConstPdf();
-        return true;
-    }
-
-    COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const
-    {
-        return 1 / (4 * M_PI);
-    }
-
-private:
-    Texture* albedo;
 };
 
 #endif //PATHTRACER_MATERIAL_H

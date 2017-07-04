@@ -13,8 +13,8 @@
 #include <fstream>
 #include <cfloat>
 #include <vector>
-#include "ptAABB.h"
-#include "ptRectangle.h"
+//#include "ptAABB.h"
+//#include "ptRectangle.h"
 #include "ptSphere.h"
 #include "ptHitableList.h"
 #include "ptAmbientLight.h"
@@ -27,7 +27,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-const int MAX_DEPTH = 25;
+const int MAX_DEPTH = 5;
 
 #ifdef __CUDA_ARCH__
     __device__ AmbientLight* g_ambientLight = NULL;
@@ -37,6 +37,44 @@ const int MAX_DEPTH = 25;
     Camera g_cam;
 #endif
 
+COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, unsigned int *seed0, unsigned int *seed1)
+{
+    Vector3f accumCol(1, 1, 1);
+    Vector3f attenuation(0, 0, 0);
+
+    Rayf currentRay(r);
+
+    for (int depth = 0; depth < MAX_DEPTH; depth++)
+    {
+        HitRecord rec;
+        if (world->hit(currentRay, 0.001f, FLT_MAX, rec))
+        {
+            Rayf scattered;
+            if (rec.material->scatter(currentRay, rec, attenuation, scattered, seed0, seed1))
+            {
+                accumCol *= attenuation;
+                currentRay = scattered;
+            }
+            else
+            {
+                accumCol = Vector3f(0.0f, 0.0f, 0.0f);
+                break;
+            }
+        }
+        else
+        {
+            Vector3f unit_dir = unit_vector(r.direction());
+            float t = 0.5f * (unit_dir.y() + 1.0f);
+
+            attenuation = (1.0f - t) * Vector3f(1.0f, 1.0f, 1.0f) + t * Vector3f(0.5f, 0.7f, 1.0f);
+            accumCol *= attenuation;
+            break;
+        }
+    }
+    return accumCol;
+}
+
+/*
 COMMON_FUNC Vector3f color_nr(const Ray<float>& r, Hitable* world, Hitable* lightShape, RNG* rng)
 {
     Vector3f accumCol(1, 1, 1);
@@ -93,8 +131,27 @@ COMMON_FUNC Vector3f color_nr(const Ray<float>& r, Hitable* world, Hitable* ligh
     }
     return accumCol;
 }
+*/
 
-__global__ void render_kernel(float3* pOutImage, Hitable** world, Hitable** lightShape, int nx, int ny, int ns)
+COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny, int ns, unsigned int* seed0, unsigned int* seed1)
+{
+    Vector3f accumCol(0, 0, 0);
+    for (int s = 0; s < ns; s++)
+    {
+        float u = (x + rand(seed0, seed1)) / float(nx);
+        float v = (y + rand(seed0, seed1)) / float(ny);
+        Rayf r = g_cam.getRay(u, v, seed0, seed1);
+        accumCol += color(r, *world, seed0, seed1);
+    }
+    accumCol /= float(ns);
+    accumCol[0] = sqrtf(accumCol[0]);
+    accumCol[1] = sqrtf(accumCol[1]);
+    accumCol[2] = sqrtf(accumCol[2]);
+
+    return accumCol;
+}
+
+__global__ void render_kernel(float3* pOutImage, Hitable** world, int nx, int ny, int ns)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -105,22 +162,12 @@ __global__ void render_kernel(float3* pOutImage, Hitable** world, Hitable** ligh
 
     unsigned int seed0 = x;  // seeds for random number generator
     unsigned int seed1 = y;
-    SimpleRng rng(seed0, seed1);
+    Vector3f accumCol = render_pixel(world, x, y, nx, ny, ns, &seed0, &seed1);
 
-    Vector3<float> accumCol(0, 0, 0);
-    for (int s = 0; s < ns; s++)
-    {
-        float u = (x + rng.rand()) / float(nx);
-        float v = (y + rng.rand()) / float(ny);
-        Ray<float> r = g_cam.getRay(u, v, &rng);
-        accumCol += color_nr(r, *world, *lightShape, &rng);
-    }
-    accumCol /= float(ns);
-
-    pOutImage[i] = make_float3(sqrtf(accumCol[0]), sqrtf(accumCol[1]), sqrtf(accumCol[2]));
+    pOutImage[i] = make_float3(accumCol[0], accumCol[1], accumCol[2]);
 }
 
-__global__ void allocate_world_kernel(Hitable** world, Hitable** lightShape, float aspect)
+COMMON_FUNC void simple_spheres(Hitable** world, float aspect)
 {
     int i = 0;
     Hitable** list = new Hitable*[4];
@@ -132,13 +179,10 @@ __global__ void allocate_world_kernel(Hitable** world, Hitable** lightShape, flo
     *world = new HitableList(i, list);
 
     g_cam = Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
-
-    g_ambientLight = new SkyAmbient();
-
-    *lightShape = NULL;
 }
 
-__global__ void cornell_box_kernel(Hitable **world, Hitable** lightShape, float aspect)
+/*
+COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShape, float aspect)
 {
     int i = 0;
     Hitable **list = new Hitable*[8];
@@ -146,7 +190,6 @@ __global__ void cornell_box_kernel(Hitable **world, Hitable** lightShape, float 
     Material *white = new Lambertian( new ConstantTexture(Vector3f(0.73, 0.73, 0.73)) );
     Material *green = new Lambertian( new ConstantTexture(Vector3f(0.12, 0.45, 0.15)) );
     Material *light = new DiffuseLight( new ConstantTexture(Vector3f(15, 15, 15)) );
-    Material* aluminum = new Metal(Vector3f(0.8, 0.85, 0.88), 0.0);
 
     list[i++] = new FlipNormals(new YZRectangle(0, 555, 0, 555, 555, green));
     list[i++] = new YZRectangle(0, 555, 0, 555, 0, red);
@@ -156,7 +199,7 @@ __global__ void cornell_box_kernel(Hitable **world, Hitable** lightShape, float 
     list[i++] = new FlipNormals(new XYRectangle(0, 555, 0, 555, 555, white));
 
     list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 165, 165), white), -18), Vector3f(130, 0, 65));
-    list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 330, 165), aluminum), 15), Vector3f(265, 0, 295));
+    list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 330, 165), white), 15), Vector3f(265, 0, 295));
 
     *world = new HitableList(i, list);
 
@@ -169,6 +212,11 @@ __global__ void cornell_box_kernel(Hitable **world, Hitable** lightShape, float 
     g_ambientLight = new ConstantAmbient();
 
     *lightShape = new XZRectangle(213, 343, 227, 332, 554, NULL);
+}
+*/
+__global__ void allocate_world_kernel(Hitable** world, float aspect)
+{
+    simple_spheres(world, aspect);
 }
 
 void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, int ny)
@@ -237,66 +285,12 @@ inline Vector3f deNan(const Vector3f& c)
     return temp;
 }
 
-void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, Hitable* lightShapes, RNG* rng)
+void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, unsigned int *seed0, unsigned int *seed1)
 {
     for (int x = 0; x < nx; x++)
     {
-        Vector3f col(0, 0, 0);
-        for (int s = 0; s<ns; s++)
-        {
-            auto u = (x + rng->rand()) / float(nx);
-            auto v = (line + rng->rand()) / float(ny);
-            Rayf r = cam.getRay(u, v, rng);
-            col += deNan(color_nr(r, world, lightShapes, rng));
-        }
-        col /= double(ns);
-        outLine[x] = Vector3f(sqrt(std::max(0.0f, col[0])), sqrt(std::max(0.0f, col[1])), sqrt(std::max(0.0f, col[2])));
+        outLine[x] = render_pixel(&world, x, line, nx, ny, ns, seed0, seed1);
     }
-}
-
-Hitable* cornellBox(float aspect, Camera& camera, std::vector<Hitable*>& lights)
-{
-    const Vector3f lookFrom(278, 278, -800);
-    const Vector3f lookAt(278, 278, 0);
-    const float dist_to_focus = 10.0;
-    const float aperture = 0.0;
-    camera = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
-
-    std::vector<Hitable*> list;
-
-    Material* red = new Lambertian(new ConstantTexture(Vector3f(0.65, 0.05, 0.05)));
-    Material* white = new Lambertian(new ConstantTexture(Vector3f(0.73, 0.73, 0.73)));
-    Material* green = new Lambertian(new ConstantTexture(Vector3f(0.12, 0.45, 0.15)));
-    Material* light = new DiffuseLight(new ConstantTexture(Vector3f(15, 15, 15)));
-    Material* aluminum = new Metal(Vector3f(0.8, 0.85, 0.88), 0.0);
-    Material* glass = new Dielectric(1.5);
-
-    list.push_back(new FlipNormals(new YZRectangle(0, 555, 0, 555, 555, green)));
-    list.push_back(new YZRectangle(0, 555, 0, 555, 0, red));
-    list.push_back(new FlipNormals(new XZRectangle(213, 343, 227, 332, 554, light)));
-    list.push_back(new FlipNormals(new XZRectangle(0, 555, 0, 555, 555, white)));
-    list.push_back(new XZRectangle(0, 555, 0, 555, 0, white));
-    list.push_back(new FlipNormals(new XYRectangle(0, 555, 0, 555, 555, white)));
-
-    list.push_back(new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 165, 165), white), -18), Vector3f(130, 0, 65)));
-    list.push_back(new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 330, 165), aluminum), 15), Vector3f(265, 0, 295)));
-    //list.push_back(new Translate(new Box(Vector3(0, 0, 0), Vector3(165, 330, 165), aluminum), Vector3(265, 0, 295)));
-    //list.push_back(new Sphere(Vector3(190, 90, 190), 90, glass));
-
-    //list.push_back(new Translate(new Box(Vector3(0, 0, 0), Vector3(165, 165, 165), white), Vector3(130, 0, 65)));
-    //list.push_back(new Translate(new Box(Vector3(0, 0, 0), Vector3(165, 330, 165), white), Vector3(265, 0, 295)));
-
-    //Hitable* b1 = new Translate(new RotateY(new Box(Vector3(0, 0, 0), Vector3(165, 165, 165), white), -18), Vector3(130, 0, 65));
-    //Hitable* b2 = new Translate(new RotateY(new Box(Vector3(0, 0, 0), Vector3(165, 330, 165), white), 15), Vector3(265, 0, 295));
-
-    //list.push_back(new ConstantMedium(b1, 0.01, new ConstantTexture(Vector3(1, 1, 1))));
-    //list.push_back(new ConstantMedium(b2, 0.01, new ConstantTexture(Vector3(0, 0, 0))));
-
-    lights.push_back(new XZRectangle(213, 343, 227, 332, 554, nullptr));
-
-    g_ambientLight = new SkyAmbient();
-
-    return new HitableList(list.size(), list.data());
 }
 
 int main(int argc, char** argv)
@@ -342,6 +336,8 @@ int main(int argc, char** argv)
 
     const float aspect = float(nx)/float(ny);
 
+    Vector3f* outImage = new Vector3f[nx * ny];
+
     if (!cpu)
     {
         float3* pOutImage = NULL;
@@ -350,11 +346,8 @@ int main(int argc, char** argv)
         Hitable** world = NULL;
         cudaMalloc(&world, sizeof(Hitable**));
 
-        Hitable** lightShape = NULL;
-        cudaMalloc(&lightShape, sizeof(Hitable**));
-
         std::cerr << "Allocating world...";
-        allocate_world_kernel<<<1, 1>>>(world, lightShape, aspect);
+        allocate_world_kernel<<<1, 1>>>(world, aspect);
         cudaError_t err = cudaDeviceSynchronize();
         std::cerr << "done" << std::endl;
         if (err != cudaSuccess)
@@ -366,7 +359,7 @@ int main(int argc, char** argv)
         dim3 block(8, 8, 1);
         dim3 grid(IDIVUP(nx, block.x), IDIVUP(ny, block.y), 1);
         std::cerr << "Rendering world...";
-        render_kernel<<<grid, block>>>(pOutImage, world, lightShape, nx, ny, ns);
+        render_kernel<<<grid, block>>>(pOutImage, world, nx, ny, ns);
         err = cudaDeviceSynchronize();
         std::cerr << "done" << std::endl;
         if (err != cudaSuccess)
@@ -375,41 +368,26 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
 
-        Vector3f* pTemp = new Vector3f[nx * ny];
-        cudaMemcpy(pTemp, pOutImage, nx*ny*sizeof(float3), cudaMemcpyDeviceToHost);
+        cudaMemcpy(outImage, pOutImage, nx*ny*sizeof(Vector3f), cudaMemcpyDeviceToHost);
         cudaFree(pOutImage);
-
-        writeImage(outFile, pTemp, nx, ny);
-        delete[] pTemp;
     }
     else
     {
         Camera cam;
-        const double aspect = double(nx)/double(ny);
-        std::vector<Hitable*> lights;
-        Hitable* world = cornellBox(aspect, cam, lights);// cornellBox(); // simpleLight(); //randomScene(); //
-        HitableList* lightShapes = nullptr;
-        if (!lights.empty())
-            lightShapes = new HitableList(lights.size(), lights.data());
-        //Hitable* lightShape = new XZRectangle(213, 343, 227, 332, 554, nullptr);
-        //Hitable* glassSphere = new Sphere(Vector3(190, 90, 190), 90, nullptr);
-        //lights.push_back(lightShape);
-        //lights.push_back(glassSphere);
-        //HitableList* lightShapes = new HitableList(lights);
+        Hitable* world = NULL;
+        simple_spheres(&world, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
 
-        Vector3f* outImage = new Vector3f[nx * ny];
+        unsigned int seed0 = 42;
+        unsigned int seed1 = 13;
 
         Progress progress(nx*ny, "PathTracers");
 
-        DRandRng* rng = new DRandRng(42);
-
-        int index = 0;
         #pragma omp parallel for if(numThreads)
         for (int j = 0; j < ny; j++)
         {
             Vector3f* outLine = outImage + (nx * j);
             const int line = ny - j - 1;
-            renderLine(line, outLine, nx, ny, ns, cam, world, lightShapes, rng);
+            renderLine(line, outLine, nx, ny, ns, cam, world, &seed0, &seed1);
 
             #pragma omp critical(progress)
             {
@@ -418,13 +396,10 @@ int main(int argc, char** argv)
         }
 
         progress.completed();
-
-        writeImage(outFile, outImage, nx, ny);
-
-        delete rng;
-        delete[] outImage;
     }
 
+    writeImage(outFile, outImage, nx, ny);
+    delete[] outImage;
     std::cerr << "Done." << std::endl;
 
     return EXIT_SUCCESS;

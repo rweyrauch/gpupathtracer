@@ -17,6 +17,8 @@
 class AmbientLight
 {
 public:
+    COMMON_FUNC virtual ~AmbientLight() {}
+
     COMMON_FUNC virtual Vector3f emitted(const Rayf& ray) const = 0;
 };
 

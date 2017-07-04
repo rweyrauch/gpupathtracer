@@ -63,33 +63,6 @@ public:
         return false;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
-    {
-        bbox = AABB<float>(center - Vector3f(radius, radius, radius), center + Vector3f(radius, radius, radius));
-        return true;
-    }
-
-    COMMON_FUNC virtual float pdfValue(const Vector3f &o, const Vector3f &v) const
-    {
-        HitRecord rec;
-        if (hit(Rayf(o, v), 0.001, FLT_MAX, rec))
-        {
-            float cosThetaMax = Sqrt(1 - radius * radius / (center - o).squared_length());
-            float solidAngle = 2 * M_PI * (1 - cosThetaMax);
-            return 1 / solidAngle;
-        }
-        return 0;
-    }
-
-    COMMON_FUNC virtual Vector3f random(const Vector3f &o, RNG* rng) const
-    {
-        Vector3f direction = center - o;
-        float distSqrd = direction.squared_length();
-        ONB<float> uvw;
-        uvw.buildFromW(direction);
-        return uvw.local(randomToUnitSphere(radius, distSqrd, rng));
-    }
-
     Vector3f center;
     float radius;
     Material* material;
@@ -139,14 +112,6 @@ public:
             }
         }
         return false;
-    }
-
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
-    {
-        auto box0 = AABB<float>(center0 - Vector3<float>(radius, radius, radius), center0 + Vector3<float>(radius, radius, radius));
-        auto box1 = AABB<float>(center1 - Vector3<float>(radius, radius, radius), center1 + Vector3<float>(radius, radius, radius));
-        bbox = join(box0, box1);
-        return true;
     }
 
     COMMON_FUNC Vector3<float> center(float time) const

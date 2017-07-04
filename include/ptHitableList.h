@@ -11,7 +11,6 @@
 #define PATHTRACER_HITABLELIST_H
 
 #include "ptCudaCommon.h"
-#include "ptPDF.h"
 #include "ptHitable.h"
 
 class HitableList : public Hitable {
@@ -37,46 +36,6 @@ public:
             }
         }
         return hit_anything;
-    }
-
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
-    {
-        if (count == 0) return false;
-
-        AABB<float> tempBox;
-        bool first = list[0]->bounds(t0, t1, tempBox);
-        if (!first)
-            return false;
-        else
-            bbox = tempBox;
-
-        for (int i = 0; i < count; i++)
-        {
-            if (list[i]->bounds(t0, t1, tempBox))
-            {
-                bbox = join(bbox, tempBox);
-            }
-            else
-                return false;
-        }
-        return true;
-    }
-
-    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const
-    {
-        float weight = 1 / static_cast<float>(count);
-        float sum = 0;
-        for (int i = 0; i < count; i++)
-        {
-            sum += weight * list[i]->pdfValue(o, v);
-        }
-        return sum;
-    }
-
-    COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG* rng) const
-    {
-        int index = (int)(rng->rand() * count);
-        return list[index]->random(o, rng);
     }
 
     int count;
