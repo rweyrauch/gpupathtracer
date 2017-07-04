@@ -183,6 +183,56 @@ COMMON_FUNC void simple_spheres(Hitable** world, float aspect)
     g_cam = Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
 }
 
+COMMON_FUNC void random_scene(Hitable** world, float aspect)
+{
+    const Vector3f lookFrom(13, 2, 3);
+    const Vector3f lookAt(0, 0, 0);
+    const double dist_to_focus = 10.0;
+    const double aperture = 0.0;
+    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 20, aspect, aperture, dist_to_focus, 0.0, 1.0);
+
+    SimpleRng rng(42, 13);
+
+    int n = 500;
+    Hitable** list = new Hitable*[n];
+
+    int i = 0;
+    Texture* checker = new CheckerTexture(new ConstantTexture(Vector3f(0.2, 0.3, 0.1)), new ConstantTexture(Vector3f(0.9, 0.9, 0.9)));
+    list[i++] = new Sphere(Vector3f(0,-1000,0), 1000, new Lambertian(checker));
+    for (int a = -11; a < 11; a++)
+    {
+        for (int b = -11; b < 11; b++)
+        {
+            double choose_mat = rng.rand();
+            Vector3f center(a+0.9*rng.rand(),0.2,b+0.9*rng.rand());
+            if ((center-Vector3f(4,0.2,0)).length() > 0.9)
+            {
+                if (choose_mat < 0.8) // diffuse
+                {
+                    list[i++] = new MovingSphere(center, center+Vector3f(0, 0.5*rng.rand(),0), 0, 1, 0.2, new Lambertian(new ConstantTexture(Vector3f(rng.rand()*rng.rand(), rng.rand()*rng.rand(), rng.rand()*rng.rand()))));
+                }
+                else if (choose_mat < 0.95) // metal
+                {
+                    list[i++] = new Sphere(center, 0.2, new Metal(Vector3f(0.5*(1+rng.rand()), 0.5*(1+rng.rand()), 0.5*rng.rand()), 0.3));
+                }
+                else // glass
+                {
+                    list[i++] = new Sphere(center, 0.2, new Dielectric(1.5));
+                }
+            }
+        }
+    }
+
+    list[i++] = new Sphere(Vector3f(0,1,0), 1.0, new Dielectric(1.5));
+    list[i++] = new Sphere(Vector3f(-4, 1, 0), 1.0, new Lambertian(new ConstantTexture(Vector3f(0.4, 0.2, 0.1))));
+    list[i++] = new Sphere(Vector3f(4, 1, 0), 1.0, new Metal(Vector3f(0.7, 0.6, 0.5), 0.0));
+
+    delete g_ambientLight;
+    g_ambientLight = new SkyAmbient();
+
+    *world = new HitableList(i, list);
+}
+
 /*
 COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShape, float aspect)
 {
@@ -218,7 +268,7 @@ COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShape, float aspect
 */
 __global__ void allocate_world_kernel(Hitable** world, float aspect)
 {
-    simple_spheres(world, aspect);
+    random_scene(world, aspect);
 }
 
 void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, int ny)
@@ -377,7 +427,7 @@ int main(int argc, char** argv)
     {
         Camera cam;
         Hitable* world = NULL;
-        simple_spheres(&world, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
+        random_scene(&world, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
 
         unsigned int seed0 = 42;
         unsigned int seed1 = 13;
