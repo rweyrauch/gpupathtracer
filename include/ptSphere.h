@@ -63,6 +63,12 @@ public:
         return false;
     }
 
+    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    {
+        bbox = AABB<float>(center - Vector3f(radius, radius, radius), center + Vector3f(radius, radius, radius));
+        return true;
+    }
+
     Vector3f center;
     float radius;
     Material* material;
@@ -113,6 +119,15 @@ public:
         }
         return false;
     }
+
+    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    {
+        AABB<float> box0 = AABB<float>(center0 - Vector3f(radius, radius, radius), center0 + Vector3f(radius, radius, radius));
+        AABB<float> box1 = AABB<float>(center1 - Vector3f(radius, radius, radius), center1 + Vector3f(radius, radius, radius));
+        bbox = join(box0, box1);
+        return true;
+    }
+
 
     COMMON_FUNC Vector3<float> center(float time) const
     {

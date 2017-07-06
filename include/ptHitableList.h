@@ -38,6 +38,30 @@ public:
         return hit_anything;
     }
 
+    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    {
+        if (count == 0) return false;
+
+        AABB<float> tempBox;
+        bool first = list[0]->bounds(t0, t1, tempBox);
+        if (!first)
+            return false;
+        else
+            bbox = tempBox;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (list[i]->bounds(t0, t1, tempBox))
+            {
+                bbox = join(bbox, tempBox);
+            }
+            else
+                return false;
+        }
+        return true;
+    }
+
+
     int count;
     Hitable** list;
 };

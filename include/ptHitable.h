@@ -14,6 +14,7 @@
 #include "ptVector3.h"
 #include "ptVector2.h"
 #include "ptRay.h"
+#include "ptAABB.h"
 
 class Material;
 class RNG;
@@ -32,6 +33,8 @@ class Hitable
 public:
     COMMON_FUNC virtual ~Hitable() {}
     COMMON_FUNC virtual bool hit(const Rayf& r, float t_min, float t_max, HitRecord& rec) const = 0;
+    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const = 0;
+
 };
 
 #endif //PATHTRACER_HITABLE_H
