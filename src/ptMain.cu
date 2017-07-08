@@ -13,8 +13,8 @@
 #include <fstream>
 #include <cfloat>
 #include <vector>
-//#include "ptAABB.h"
-//#include "ptRectangle.h"
+#include "ptAABB.h"
+#include "ptRectangle.h"
 #include "ptRNG.h"
 #include "ptSphere.h"
 #include "ptHitableList.h"
@@ -28,8 +28,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-const int MAX_DEPTH = 5;
-
 #ifdef __CUDA_ARCH__
     __device__ AmbientLight* g_ambientLight = NULL;
     __device__ Camera g_cam;
@@ -38,37 +36,38 @@ const int MAX_DEPTH = 5;
     Camera g_cam;
 #endif
 
-COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, RNG& rng)
+COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, RNG& rng, int maxDepth)
 {
     Vector3f accumCol(1, 1, 1);
     Vector3f attenuation(0, 0, 0);
 
     Rayf currentRay(r);
 
-    for (int depth = 0; depth < MAX_DEPTH; depth++)
+    for (int depth = 0; depth < maxDepth; depth++)
     {
         HitRecord rec;
         if (world->hit(currentRay, 0.001f, FLT_MAX, rec))
         {
             Rayf scattered;
+            Vector3f emitted = rec.material->emitted(rec.uv, rec.p);
             if (rec.material->scatter(currentRay, rec, attenuation, scattered, rng))
             {
-                accumCol *= attenuation;
+                accumCol *= (emitted + attenuation);
                 currentRay = scattered;
             }
             else
             {
-                accumCol = Vector3f(0.0f, 0.0f, 0.0f);
+                accumCol *= emitted;
                 break;
             }
         }
         else
         {
-            Vector3f unit_dir = unit_vector(r.direction());
-            float t = 0.5f * (unit_dir.y() + 1.0f);
+            if (g_ambientLight)
+                accumCol *= g_ambientLight->emitted(r);
+            else
+                accumCol = Vector3f(0.0f, 0.0f, 0.0f);
 
-            attenuation = (1.0f - t) * Vector3f(1.0f, 1.0f, 1.0f) + t * Vector3f(0.5f, 0.7f, 1.0f);
-            accumCol *= attenuation;
             break;
         }
     }
@@ -76,13 +75,13 @@ COMMON_FUNC Vector3f color(const Rayf& r, Hitable* world, RNG& rng)
 }
 
 /*
-COMMON_FUNC Vector3f color_nr(const Ray<float>& r, Hitable* world, Hitable* lightShape, RNG* rng)
+COMMON_FUNC Vector3f color_nr_pdf(const Ray<float>& r, Hitable* world, Hitable* lightShape, RNG* rng, int maxDepth)
 {
     Vector3f accumCol(1, 1, 1);
 
     Ray<float> currentRay(r);
 
-    for (int depth = 0; depth < MAX_DEPTH; depth++)
+    for (int depth = 0; depth < maxDepth; depth++)
     {
         HitRecord rec;
         if (world->hit(r, 0.001f, FLT_MAX, rec))
@@ -134,7 +133,7 @@ COMMON_FUNC Vector3f color_nr(const Ray<float>& r, Hitable* world, Hitable* ligh
 }
 */
 
-COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny, int ns, RNG& rng)
+COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny, int ns, RNG& rng, int maxDepth)
 {
     Vector3f accumCol(0, 0, 0);
     for (int s = 0; s < ns; s++)
@@ -142,7 +141,7 @@ COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny,
         float u = (x + rng.rand()) / float(nx);
         float v = (y + rng.rand()) / float(ny);
         Rayf r = g_cam.getRay(u, v, rng);
-        accumCol += color(r, *world, rng);
+        accumCol += color(r, *world, rng, maxDepth);
     }
     accumCol /= float(ns);
     accumCol[0] = sqrtf(accumCol[0]);
@@ -152,7 +151,7 @@ COMMON_FUNC Vector3f render_pixel(Hitable** world, int x, int y, int nx, int ny,
     return accumCol;
 }
 
-__global__ void render_kernel(float3* pOutImage, Hitable** world, int nx, int ny, int ns)
+__global__ void render_kernel(float3* pOutImage, Hitable** world, int nx, int ny, int ns, int maxDepth)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -164,7 +163,7 @@ __global__ void render_kernel(float3* pOutImage, Hitable** world, int nx, int ny
     unsigned int seed0 = x;  // seeds for random number generator
     unsigned int seed1 = y;
     SimpleRng rng(seed0, seed1);
-    Vector3f accumCol = render_pixel(world, x, y, nx, ny, ns, rng);
+    Vector3f accumCol = render_pixel(world, x, y, nx, ny, ns, rng, maxDepth);
 
     pOutImage[i] = make_float3(accumCol[0], accumCol[1], accumCol[2]);
 }
@@ -181,6 +180,35 @@ COMMON_FUNC void simple_spheres(Hitable** world, float aspect)
     *world = new HitableList(i, list);
 
     g_cam = Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
+
+    delete g_ambientLight;
+    g_ambientLight = new SkyAmbient();
+}
+
+COMMON_FUNC void simple_light(Hitable** world, float aspect)
+{
+    const Vector3f lookFrom(13, 2, 3);
+    const Vector3f lookAt(0, 0, 0);
+    const double dist_to_focus = 10.0;
+    const double aperture = 0.0;
+    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 20, aspect, aperture, dist_to_focus);
+
+    Texture* noise = new NoiseTexture(1.0f);
+    int i = 0;
+    Hitable** list = new Hitable*[4];
+    list[i++] = new Sphere(Vector3f(0,-1000, 0), 1000, new Lambertian(noise));
+    list[i++] = new Sphere(Vector3f(0, 2, 0), 2, new Lambertian(noise));
+
+    list[i++] = new Sphere(Vector3f(0, 7, 0), 2, new DiffuseLight(new ConstantTexture(Vector3f(4, 4, 4))));
+    list[i++] = new XYRectangle(3, 5, 1, 3, -2, new DiffuseLight(new ConstantTexture(Vector3f(4, 4, 4))));
+
+    //lights.push_back(new Sphere(Vector3(0, 7, 0), 2, nullptr));
+    //lights.push_back(new XYRectangle(3, 5, 1, 3, -2, nullptr));
+
+    delete g_ambientLight;
+    g_ambientLight = new ConstantAmbient();
+
+    *world = new HitableList(i, list);
 }
 
 COMMON_FUNC void random_scene(Hitable** world, float aspect)
@@ -233,8 +261,7 @@ COMMON_FUNC void random_scene(Hitable** world, float aspect)
     *world = new HitableList(i, list);
 }
 
-/*
-COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShape, float aspect)
+COMMON_FUNC void cornell_box(Hitable **world, float aspect)
 {
     int i = 0;
     Hitable **list = new Hitable*[8];
@@ -250,8 +277,9 @@ COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShape, float aspect
     list[i++] = new XZRectangle(0, 555, 0, 555, 0, white);
     list[i++] = new FlipNormals(new XYRectangle(0, 555, 0, 555, 555, white));
 
-    list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 165, 165), white), -18), Vector3f(130, 0, 65));
-    list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 330, 165), white), 15), Vector3f(265, 0, 295));
+    //list[i++] = new Sphere(Vector3f(160, 100, 145), 100, new Dielectric(1.5));
+    //list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 165, 165), white), -18), Vector3f(130, 0, 65));
+    //list[i++] = new Translate(new RotateY(new Box(Vector3f(0, 0, 0), Vector3f(165, 330, 165), white), 15), Vector3f(265, 0, 295));
 
     *world = new HitableList(i, list);
 
@@ -261,11 +289,44 @@ COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShape, float aspect
     const double aperture = 0.0;
     g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
+    delete g_ambientLight;
     g_ambientLight = new ConstantAmbient();
 
-    *lightShape = new XZRectangle(213, 343, 227, 332, 554, NULL);
+    //*lightShape = new XZRectangle(213, 343, 227, 332, 554, NULL);
 }
-*/
+
+COMMON_FUNC void cornell_box_spheres(Hitable **world, float aspect)
+{
+    int i = 0;
+    Hitable **list = new Hitable*[8];
+    Material *red = new Lambertian( new ConstantTexture(Vector3f(0.65f, 0.05f, 0.05f)) );
+    Material *white = new Lambertian( new ConstantTexture(Vector3f(0.73, 0.73, 0.73)) );
+    Material *green = new Lambertian( new ConstantTexture(Vector3f(0.12, 0.45, 0.15)) );
+
+    list[i++] = new Sphere(Vector3f(1e5f+1.0f, 40.8f, 81.6f), 1e5f, red);
+    list[i++] = new Sphere(Vector3f(-1e5f+99.0f, 40.8f, 81.6f), 1e5f, red);
+
+    list[i++] = new Sphere(Vector3f(50.0f, 40.8f, 1e5f), 1e5f, green);
+
+    list[i++] = new Sphere(Vector3f(50.0f, 1e5f, 81.6f), 1e5f, white);
+    list[i++] = new Sphere(Vector3f(50.0f, -1e5f + 81.6f, 81.6f), 1e5f, white);
+
+    list[i++] = new Sphere(Vector3f(27.0f, 16.5f, 47.0f), 16.5f, white);
+    list[i++] = new Sphere(Vector3f(73.0f, 16.5f, 78.0f), 16.5f, white);
+
+    *world = new HitableList(i, list);
+
+    const Vector3f lookFrom(278, 278, -800);
+    const Vector3f lookAt(278, 278, 0);
+    const double dist_to_focus = 10.0;
+    const double aperture = 0.0;
+    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+
+    delete g_ambientLight;
+    g_ambientLight = new ConstantAmbient();
+
+}
+
 __global__ void allocate_world_kernel(Hitable** world, float aspect)
 {
     random_scene(world, aspect);
@@ -337,11 +398,11 @@ inline Vector3f deNan(const Vector3f& c)
     return temp;
 }
 
-void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, RNG& rng)
+void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, RNG& rng, int maxDepth)
 {
     for (int x = 0; x < nx; x++)
     {
-        outLine[x] = render_pixel(&world, x, line, nx, ny, ns, rng);
+        outLine[x] = render_pixel(&world, x, line, nx, ny, ns, rng, maxDepth);
     }
 }
 
@@ -355,6 +416,7 @@ int main(int argc, char** argv)
         ("h,height", "Output height.", cxxopts::value<int>())
         ("n,numsamples", "Number of sample rays per pixel.", cxxopts::value<int>())
         ("t,threads", "Number of render threads.", cxxopts::value<int>())
+        ("d,maxdepth", "Maximum ray bounces.", cxxopts::value<int>())
         ("f,file", "Output filename.", cxxopts::value<std::string>());
 
     options.parse(argc, argv);
@@ -365,6 +427,7 @@ int main(int argc, char** argv)
     int ny = 128 * 4;
     bool cpu = options.count("cpu") > 0;
     int numThreads = 1;
+    int maxDepth = 25;
 
     std::string outFile("outputImage.ppm");
 
@@ -374,6 +437,8 @@ int main(int argc, char** argv)
         ny = options["height"].as<int>();
     if (options.count("numsamples"))
         ns = options["numsamples"].as<int>();
+    if (options.count("maxdepth"))
+        maxDepth = options["maxdepth"].as<int>();
     if (options.count("file"))
         outFile = options["file"].as<std::string>();
     if (options.count("threads"))
@@ -411,7 +476,7 @@ int main(int argc, char** argv)
         dim3 block(8, 8, 1);
         dim3 grid(IDIVUP(nx, block.x), IDIVUP(ny, block.y), 1);
         std::cerr << "Rendering world...";
-        render_kernel<<<grid, block>>>(pOutImage, world, nx, ny, ns);
+        render_kernel<<<grid, block>>>(pOutImage, world, nx, ny, ns, maxDepth);
         err = cudaDeviceSynchronize();
         std::cerr << "done" << std::endl;
         if (err != cudaSuccess)
@@ -440,7 +505,7 @@ int main(int argc, char** argv)
         {
             Vector3f* outLine = outImage + (nx * j);
             const int line = ny - j - 1;
-            renderLine(line, outLine, nx, ny, ns, cam, world, rng);
+            renderLine(line, outLine, nx, ny, ns, cam, world, rng, maxDepth);
 
             #pragma omp critical(progress)
             {
