@@ -12,6 +12,7 @@
 
 #include "ptCudaCommon.h"
 #include "ptHitable.h"
+#include "ptRNG.h"
 
 class HitableList : public Hitable {
 public:
@@ -61,7 +62,24 @@ public:
         return true;
     }
 
+    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const
+    {
+        float weight = 1 / (float)count;
+        float sum = 0;
+        for (int i = 0; i < count; i++)
+        {
+            sum += weight * list[i]->pdfValue(o, v);
+        }
+        return sum;
+    }
 
+    COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const
+    {
+        auto index = int(rng.rand() * count);
+        return list[index]->random(o, rng);
+    }
+
+private:
     int count;
     Hitable** list;
 };

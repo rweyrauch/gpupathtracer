@@ -16,56 +16,19 @@
 #include "ptRNG.h"
 #include "ptHitable.h"
 
-COMMON_FUNC inline Vector3f randomInUnitSphere(RNG* rng)
-{
-    const float phi = rng->rand() * 2 * M_PI;
-    const float z = 1 - 2 * rng->rand();
-    const float r = Sqrt(Max(0, 1 - z * z));
-    return Vector3f(r * Cos(phi), r * Sin(phi), z);
-}
-
-COMMON_FUNC inline Vector3f randomInUnitDisk(RNG* rng)
-{
-    const float r = Sqrt(rng->rand());
-    const float theta = rng->rand() * 2 * M_PI;
-    return Vector3f(r * Cos(theta), r * Sin(theta), 0);
-}
-
-COMMON_FUNC inline Vector3f randomCosineDirection(RNG* rng)
-{
-    float r1 = rng->rand();
-    float r2 = rng->rand();
-    float z = Sqrt(1 - r2);
-    float phi = 2 * M_PI * r1;
-    float x = Cos(phi) * 2 * Sqrt(r2);
-    float y = Sin(phi) * 2 * Sqrt(r2);
-    return Vector3f(x, y, z);
-}
-
-COMMON_FUNC inline Vector3f randomToUnitSphere(float radius, float distSqrd, RNG* rng)
-{
-    float r1 = rng->rand();
-    float r2 = rng->rand();
-    float z = 1 + r2 * (Sqrt(1 - radius*radius/distSqrd) - 1);
-    float phi = 2 * M_PI * r1;
-    float x = Cos(phi) * Sqrt(1-z*z);
-    float y = Sin(phi) * Sqrt(1-z*z);
-    return Vector3f(x, y, z);
-}
-
 class Pdf
 {
 public:
     COMMON_FUNC virtual ~Pdf() {}
     COMMON_FUNC virtual float value(const Vector3f& direction) const = 0;
-    COMMON_FUNC virtual Vector3f generate(RNG* rng) const = 0;
+    COMMON_FUNC virtual Vector3f generate(RNG& rng) const = 0;
 };
 
 class ConstPdf : public Pdf
 {
 public:
     COMMON_FUNC virtual float value(const Vector3f& direction) const { return 1; };
-    COMMON_FUNC virtual Vector3f generate(RNG* rng) const { return randomToUnitSphere(1, 1, rng); };
+    COMMON_FUNC virtual Vector3f generate(RNG& rng) const { return randomToUnitSphere(1, 1, rng); };
 };
 
 class CosinePdf : public Pdf
@@ -81,7 +44,7 @@ public:
         else
             return 0;
     }
-    COMMON_FUNC virtual Vector3f generate(RNG* rng) const
+    COMMON_FUNC virtual Vector3f generate(RNG& rng) const
     {
         return uvw.local(randomCosineDirection(rng));
     }
@@ -99,13 +62,11 @@ public:
 
     COMMON_FUNC virtual float value(const Vector3f& direction) const
     {
-        //return hitable->pdfValue(origin, direction);
-        return 0.0f;
+        return hitable->pdfValue(origin, direction);
     }
-    COMMON_FUNC virtual Vector3f generate(RNG* rng) const
+    COMMON_FUNC virtual Vector3f generate(RNG& rng) const
     {
-        //return hitable->random(origin, rng);
-        return origin;
+        return hitable->random(origin, rng);
     }
 
 private:
@@ -123,9 +84,9 @@ public:
         return 0.5 * p[0]->value(direction) + 0.5 * p[1]->value(direction);
     }
 
-    COMMON_FUNC virtual Vector3f generate(RNG* rng) const
+    COMMON_FUNC virtual Vector3f generate(RNG& rng) const
     {
-        if (rng->rand() < 0.5)
+        if (rng.rand() < 0.5f)
             return p[0]->generate(rng);
         else
             return p[1]->generate(rng);

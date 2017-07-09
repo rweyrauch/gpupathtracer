@@ -69,6 +69,28 @@ public:
         return true;
     }
 
+    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const
+    {
+        HitRecord rec;
+        if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec))
+        {
+            float cosThetaMax = Sqrt(1 - radius * radius / (center - o).squared_length());
+            float solidAngle = 2 * M_PI * (1 - cosThetaMax);
+            return 1 / solidAngle;
+        }
+        return 0;
+    }
+
+    COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const
+    {
+        Vector3f direction = center - o;
+        float distSqrd = direction.squared_length();
+        ONB<float> uvw;
+        uvw.buildFromW(direction);
+        return uvw.local(randomToUnitSphere(radius, distSqrd, rng));
+    }
+
+private:
     Vector3f center;
     float radius;
     Material* material;

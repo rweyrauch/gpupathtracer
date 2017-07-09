@@ -93,6 +93,26 @@ public:
         return true;
     }
 
+    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const
+    {
+        HitRecord rec;
+        if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec))
+        {
+            float area = (x1-x0) * (z1-z0);
+            float distSqrd = rec.t * rec.t * v.squared_length();
+            float cosine = fabs(dot(v, rec.normal) / v.length());
+            return distSqrd / (cosine * area);
+        }
+        else
+            return 0;
+    }
+
+    COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const
+    {
+        Vector3f randPoint = Vector3f(x0 + rng.rand() * (x1-x0), k, z0 + rng.rand() * (z1-z0));
+        return randPoint - o;
+    }
+
 private:
     Material* material;
     float x0, x1, z0, z1, k;
