@@ -10,11 +10,15 @@
 #ifndef PATHTRACER_RECTANGLE_H
 #define PATHTRACER_RECTANGLE_H
 
+#include <math_constants.h>
+#include <cfloat>
 #include "ptCudaCommon.h"
 #include "ptHitable.h"
 #include "ptHitableList.h"
 #include "ptAABB.h"
 #include "ptRNG.h"
+
+const float RECT_TOLERANCE = 0.0001f;
 
 class XYRectangle : public Hitable
 {
@@ -48,7 +52,7 @@ public:
 
     COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
     {
-        bbox = AABB<float>(Vector3f(x0, y0, k-0.0001), Vector3f(x1, y1, k+0.0001));
+        bbox = AABB<float>(Vector3f(x0, y0, k-RECT_TOLERANCE), Vector3f(x1, y1, k+RECT_TOLERANCE));
         return true;
     }
 
@@ -89,7 +93,7 @@ public:
 
     COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
     {
-        bbox = AABB<float>(Vector3f(x0, k-0.0001, z0), Vector3f(x1, k+0.0001, z1));
+        bbox = AABB<float>(Vector3f(x0, k-RECT_TOLERANCE, z0), Vector3f(x1, k+RECT_TOLERANCE, z1));
         return true;
     }
 
@@ -100,7 +104,7 @@ public:
         {
             float area = (x1-x0) * (z1-z0);
             float distSqrd = rec.t * rec.t * v.squared_length();
-            float cosine = fabs(dot(v, rec.normal) / v.length());
+            float cosine = fabsf(dot(v, rec.normal) / v.length());
             return distSqrd / (cosine * area);
         }
         else
@@ -150,7 +154,7 @@ public:
 
     COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
     {
-        bbox = AABB<float>(Vector3f(k-0.0001, y0, z0), Vector3f(k+0.0001, y1, z1));
+        bbox = AABB<float>(Vector3f(k-RECT_TOLERANCE, y0, z0), Vector3f(k+RECT_TOLERANCE, y1, z1));
         return true;
     }
 
@@ -259,7 +263,7 @@ public:
     COMMON_FUNC RotateY(Hitable* p, float angle)
     {
         hitable = p;
-        float radians = (M_PI / 180) * angle;
+        float radians = (CUDART_PI_F / 180) * angle;
         sinTheta = Sin(radians);
         cosTheta = Cos(radians);
         hasBox = p->bounds(0, 1, bbox);

@@ -63,7 +63,7 @@ public:
     {
         float cosine = dot(rec.normal, unit_vector(scattered.direction()));
         if (cosine < 0) return 0;
-        return cosine / M_PI;
+        return cosine / CUDART_PI_F;
     }
 
 private:
@@ -185,7 +185,7 @@ public:
 
     COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const
     {
-        return 1.0f / (4 * M_PI);
+        return 1.0f / (4.0f * CUDART_PI_F);
     }
 
 private:

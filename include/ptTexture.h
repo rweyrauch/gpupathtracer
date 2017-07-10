@@ -36,6 +36,7 @@ public:
         return color;
     }
 
+private:
     Vector3f color;
 };
 
@@ -78,6 +79,7 @@ public:
         return Vector3f(n, n, n);
     }
 
+private:
     float scale = 1.0f;
 };
 
@@ -107,6 +109,7 @@ public:
         return Vector3f(r, g, b);
     }
 
+private:
     const unsigned char *data;
     int nx, ny;
 };

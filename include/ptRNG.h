@@ -10,6 +10,7 @@
 #define PATHTRACER_RNG_H
 
 #include <cstdlib>
+#include <math_constants.h>
 #include "ptCudaCommon.h"
 #include "ptVector3.h"
 
@@ -73,7 +74,7 @@ public:
 
 COMMON_FUNC inline Vector3f randomInUnitSphere(RNG& rng)
 {
-    const float phi = rng.rand() * 2 * M_PI;
+    const float phi = rng.rand() * 2 * CUDART_PI_F;
     const float z = 1 - 2 * rng.rand();
     const float r = Sqrt(Max(0, 1 - z * z));
     return Vector3f(r * Cos(phi), r * Sin(phi), z);
@@ -82,7 +83,7 @@ COMMON_FUNC inline Vector3f randomInUnitSphere(RNG& rng)
 COMMON_FUNC inline Vector3f randomInUnitDisk(RNG& rng)
 {
     const float r = Sqrt(rng.rand());
-    const float theta = rng.rand() * 2 * M_PI;
+    const float theta = rng.rand() * 2 * CUDART_PI_F;
     return Vector3f(r * Cos(theta), r * Sin(theta), 0);
 }
 

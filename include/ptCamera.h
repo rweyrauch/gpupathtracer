@@ -27,7 +27,7 @@ public:
         horizontal(),
         vertical()
     {
-        float theta = vfov * M_PI / 180;
+        float theta = vfov * CUDART_PI_F / 180;
         float halfHeight = Tan(theta / 2);
         float halfWidth = aspect * halfHeight;
         lowerLeftCorner = Vector3f(-halfWidth, -halfHeight, -1);
@@ -44,7 +44,7 @@ public:
         time1(t1)
     {
         lens_radius = aperture / 2;
-        float theta = vfov * M_PI / 180;
+        float theta = vfov * CUDART_PI_F / 180;
         float halfHeight = Tan(theta / 2);
         float halfWidth = aspect * halfHeight;
         w = unit_vector(from - to);
@@ -63,6 +63,7 @@ public:
         return Rayf(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset, time);
     }
 
+private:
     Vector3f origin;
     Vector3f lowerLeftCorner;
     Vector3f horizontal;

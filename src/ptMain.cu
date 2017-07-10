@@ -341,6 +341,70 @@ COMMON_FUNC void cornell_box_spheres(Hitable **world, Hitable** lightShapes, flo
 
 }
 
+/*
+COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
+{
+    const Vector3f lookFrom(478, 278, -600); //(278, 278, -800); //(13, 2, 3);
+    const Vector3f lookAt(278, 278, 0); //(0, 1, 0);
+    const float dist_to_focus = 10.0f;
+    const float aperture = 0.0f;
+    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+
+    int i = 0;
+    Hitable **list = new Hitable*[8];
+
+    int nb = 20;
+    Material* white = new Lambertian(new ConstantTexture(Vector3f(0.73, 0.73, 0.73)));
+    Material* ground = new Lambertian(new ConstantTexture(Vector3f(0.48, 0.83, 0.53)));
+    std::vector<Hitable*> boxList, boxList2;
+    for (int i = 0; i < nb; i++)
+    {
+        for (int j = 0; j < nb; j++)
+        {
+            double w = 100;
+            double x0 = -1000 + i*w;
+            double z0 = -1000 + j*w;
+            double y0 = 0;
+            double x1 = x0 + w;
+            double y1 = 100*(drand48()+0.01);
+            double z1 = z0 + w;
+            boxList.push_back(new Box(Vector3(x0, y0, z0), Vector3(x1, y1, z1), ground));
+        }
+    }
+
+    list.push_back(new BVH(boxList, 0, 1));
+    Material* light = new DiffuseLight(new ConstantTexture(Vector3(6, 6, 6)));
+    list.push_back(new FlipNormals(new XZRectangle(123, 423, 147, 412, 554, light)));
+    Vector3 center(400, 400, 200);
+    list.push_back(new MovingSphere(center, center+Vector3(30, 0, 0), 0, 1, 50, new Lambertian(new ConstantTexture(Vector3(0.7, 0.3, 0.1)))));
+    list.push_back(new Sphere(Vector3(260, 150, 45), 50, new Dielectric(1.5)));
+    list.push_back(new Sphere(Vector3(0, 150, 145), 50, new Metal(Vector3(0.8, 0.8, 0.9), 10)));
+    Hitable* boundary = new Sphere(Vector3(360, 150, 145), 70, new Dielectric(1.5));
+    list.push_back(boundary);
+    list.push_back(new ConstantMedium(boundary, 0.02, new ConstantTexture(Vector3(0.2, 0.4, 0.9))));
+    boundary = new Sphere(Vector3(0, 0, 0), 5000, new Dielectric(1.5));
+    list.push_back(new ConstantMedium(boundary, 0.0001, new ConstantTexture(Vector3(1.0, 1.0, 1.0))));
+    int nx, ny, nz;
+    unsigned char* tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nz, 0);
+    Material* emat = new Lambertian(new ImageTexture(tex_data, nx, ny));
+    list.push_back(new Sphere(Vector3(400, 200, 400), 100, emat));
+    Texture* pertext = new NoiseTexture(0.1);
+    list.push_back(new Sphere(Vector3(220, 280, 300), 80, new Lambertian(pertext)));
+    int ns = 1000;
+    for (int j = 0; j < ns; j++)
+    {
+        boxList2.push_back(new Sphere(Vector3(165*drand48(), 165*drand48(), 165*drand48()), 10, white));
+    }
+    list.push_back(new Translate(new RotateY(new BVH(boxList2, 0.0, 1.0), 15), Vector3(-100, 270, 395)));
+
+    lights.push_back(new XZRectangle(123, 423, 147, 412, 554, nullptr));
+    //lights.push_back(new Sphere(Vector3(360, 150, 145), 70, nullptr));
+    //lights.push_back(new Sphere(Vector3(0, 0, 0), 5000, nullptr));
+
+    return new HitableList(list);
+}
+*/
+
 __global__ void allocate_world_kernel(Hitable** world, Hitable** lightShapes, float aspect)
 {
     cornell_box(world, lightShapes, aspect);

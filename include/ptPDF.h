@@ -11,6 +11,7 @@
 #define PATHTRACER_PDF_H
 
 #include <cmath>
+#include <math_constants.h>
 #include "ptVector3.h"
 #include "ptONB.h"
 #include "ptRNG.h"
@@ -40,7 +41,7 @@ public:
     {
         float cosine = dot(unit_vector(direction), uvw.w());
         if (cosine > 0)
-            return cosine / M_PI;
+            return cosine / CUDART_PI_F;
         else
             return 0;
     }
@@ -81,7 +82,7 @@ public:
 
     COMMON_FUNC virtual float value(const Vector3f& direction) const
     {
-        return 0.5 * p[0]->value(direction) + 0.5 * p[1]->value(direction);
+        return 0.5f * p[0]->value(direction) + 0.5f * p[1]->value(direction);
     }
 
     COMMON_FUNC virtual Vector3f generate(RNG& rng) const
@@ -95,4 +96,5 @@ public:
 private:
     Pdf* p[2];
 };
+
 #endif //PATHTRACER_PDF_H

@@ -10,6 +10,7 @@
 #ifndef PATHTRACER_SPHERE_H
 #define PATHTRACER_SPHERE_H
 
+#include <cmath>
 #include "ptCudaCommon.h"
 #include "ptHitable.h"
 #include "ptPDF.h"
@@ -20,8 +21,8 @@ COMMON_FUNC void get_uv(const Vector3f& p, Vector2f& uv)
 {
     float phi = atan2f(p.z(), p.x());
     float theta = asinf(p.y());
-    uv.u() = 1 - (phi + M_PI) / (2 * M_PI);
-    uv.v() = (theta + M_PI/2) / M_PI;
+    uv.u() = 1 - (phi + CUDART_PI_F) / (2 * CUDART_PI_F);
+    uv.v() = (theta + CUDART_PI_F/2) / CUDART_PI_F;
 }
 
 class Sphere : public Hitable {
@@ -75,7 +76,7 @@ public:
         if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec))
         {
             float cosThetaMax = Sqrt(1 - radius * radius / (center - o).squared_length());
-            float solidAngle = 2 * M_PI * (1 - cosThetaMax);
+            float solidAngle = 2 * CUDART_PI_F * (1 - cosThetaMax);
             return 1 / solidAngle;
         }
         return 0;
@@ -156,6 +157,7 @@ public:
         return center0 + ((time - time0) / (time1 - time0)) * (center1 - center0);
     }
 
+private:
     Vector3f center0, center1;
     float time0, time1;
     float radius;
