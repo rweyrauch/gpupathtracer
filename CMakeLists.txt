@@ -15,6 +15,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(GPU_SOURCE_FILES
         include/ptAABB.h
         include/ptAmbientLight.h
+        include/ptBVH.h
         include/ptCamera.h
         include/ptHitable.h
         include/ptHitableList.h
@@ -23,6 +24,7 @@ set(GPU_SOURCE_FILES
         include/ptMedium.h
         include/ptONB.h
         include/ptPDF.h
+        include/ptQuickSort.h
         include/ptRay.h
         include/ptRectangle.h
         include/ptRNG.h
@@ -34,6 +36,8 @@ set(GPU_SOURCE_FILES
         src/ptProgress.cpp
         src/cxxopts.hpp
         src/ptNoise.cu
+        src/ptBVH.cu
+        src/ptQuickSort.cu
         src/ptMain.cu)
 
 set(CUDA_NVCC_FLAGS "-use_fast_math")

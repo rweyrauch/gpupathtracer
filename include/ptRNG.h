@@ -109,7 +109,7 @@ COMMON_FUNC inline Vector3f randomToUnitSphere(float radius, float distSqrd, RNG
     return Vector3f(x, y, z);
 }
 
-COMMON_FUNC float rand(unsigned int *seed0, unsigned int *seed1)
+COMMON_FUNC inline float rand(unsigned int *seed0, unsigned int *seed1)
 {
     *seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);  // hash the seeds using bitwise AND and bitshifts
     *seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);

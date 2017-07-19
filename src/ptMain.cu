@@ -108,21 +108,21 @@ COMMON_FUNC Vector3f color(const Rayf& r_in, Hitable* world, Hitable* lightShape
                 }
                 else
                 {
+                    CosinePdf pdf(rec.normal);
+                    ConstPdf pdf2;
                     if (lightShape != nullptr)
                     {
                         HitablePdf plight(lightShape, rec.p);
-                        MixturePdf p(&plight, srec.pdf);
+                        MixturePdf p(&plight, &pdf);
                         auto scattered = Rayf(rec.p, p.generate(rng), currentRay.time());
                         float pdfValue = p.value(scattered.direction());
-                        delete srec.pdf;
                         accumCol *= (emitted + (srec.attenuation * rec.material->scatteringPdf(currentRay, rec, scattered)) / pdfValue);
                         currentRay = scattered;
                     }
                     else
                     {
-                        auto scattered = Rayf(rec.p, srec.pdf->generate(rng), currentRay.time());
-                        float pdfValue = srec.pdf->value(scattered.direction());
-                        delete srec.pdf;
+                        auto scattered = Rayf(rec.p, srec.cosinePdf ? pdf.generate(rng) : pdf2.generate(rng), currentRay.time());
+                        float pdfValue = srec.cosinePdf ? pdf.value(scattered.direction()) : pdf2.value(scattered.direction());
                         accumCol *= (emitted + (srec.attenuation * rec.material->scatteringPdf(currentRay, rec, scattered)) / pdfValue);
                         currentRay = scattered;
                     }

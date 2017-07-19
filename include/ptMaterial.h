@@ -24,7 +24,8 @@ struct ScatterRecord
     Rayf specularRay;
     bool isSpecular;
     Vector3f attenuation;
-    Pdf* pdf;
+    //Pdf* pdf;
+    bool cosinePdf;
 };
 
 template <typename T>
@@ -55,7 +56,8 @@ public:
     {
         srec.isSpecular = false;
         srec.attenuation = albedo->value(rec.uv, rec.p);
-        srec.pdf = new CosinePdf(rec.normal);
+        //srec.pdf = new CosinePdf(rec.normal);
+        srec.cosinePdf = true;
         return true;
     }
 
@@ -86,7 +88,8 @@ public:
         srec.specularRay = Rayf(rec.p, reflected + fuzz * randomInUnitSphere(rng));
         srec.attenuation = albedo;
         srec.isSpecular = true;
-        srec.pdf = nullptr;
+        //srec.pdf = nullptr;
+        srec.cosinePdf = false;
         return true;
     }
 
@@ -104,7 +107,8 @@ public:
     COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const
     {
         srec.isSpecular = true;
-        srec.pdf = nullptr;
+        //srec.pdf = nullptr;
+        srec.cosinePdf = false;
         srec.attenuation = Vector3f(1, 1, 1);
         Vector3f outwardNormal;
         Vector3f reflected = reflect(r_in.direction(), rec.normal);
@@ -179,7 +183,8 @@ public:
         // TODO: fix this for new ScatterRecord
         srec.isSpecular = false;
         srec.attenuation = albedo->value(rec.uv, rec.p);
-        srec.pdf = new ConstPdf();
+        //srec.pdf = new ConstPdf();
+        srec.cosinePdf = false;
         return true;
     }
 
