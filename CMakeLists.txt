@@ -17,11 +17,13 @@ set(GPU_SOURCE_FILES
         include/ptAmbientLight.h
         include/ptBVH.h
         include/ptCamera.h
+        include/ptCudaCommon.h
         include/ptHitable.h
         include/ptHitableList.h
         include/ptMaterial.h
         include/ptMath.h
         include/ptMedium.h
+        include/ptNoise.h
         include/ptONB.h
         include/ptPDF.h
         include/ptQuickSort.h
@@ -34,6 +36,8 @@ set(GPU_SOURCE_FILES
         include/ptVector3.h
         include/ptProgress.h
         src/ptProgress.cpp
+        src/stb_image.h
+        src/stb_image_write.h
         src/cxxopts.hpp
         src/ptNoise.cu
         src/ptBVH.cu
@@ -45,5 +49,7 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_52,code=sm_52)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11)
 SET(CUDA_SEPARABLE_COMPILATION ON)
+
+set(CUDA_NVCC_FLAGS_DEBUG "-G")
 
 cuda_add_executable(gpupathtracer ${GPU_SOURCE_FILES})
