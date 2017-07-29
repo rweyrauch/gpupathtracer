@@ -17,13 +17,14 @@
 #include "ptHitableList.h"
 #include "ptAABB.h"
 #include "ptRNG.h"
+#include "ptMaterial.h"
 
 const float RECT_TOLERANCE = 0.0001f;
 
 class XYRectangle : public Hitable
 {
 public:
-    COMMON_FUNC XYRectangle() {}
+    COMMON_FUNC XYRectangle() = default;
     COMMON_FUNC XYRectangle(float X0, float X1, float Y0, float Y1, float K, Material* mat) :
         material(mat),
         x0(X0),
@@ -32,7 +33,7 @@ public:
         y1(Y1),
         k(K) {}
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         float t = (k - r_in.origin().z()) / r_in.direction().z();
         if (t < t0 || t > t1) return false;
@@ -50,11 +51,30 @@ public:
         return true;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         bbox = AABB<float>(Vector3f(x0, y0, k-RECT_TOLERANCE), Vector3f(x1, y1, k+RECT_TOLERANCE));
         return true;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= material->serialize(pStream);
+        ok |= pStream->write(&x0, sizeof(x0));
+        ok |= pStream->write(&x1, sizeof(x1));
+        ok |= pStream->write(&y0, sizeof(y0));
+        ok |= pStream->write(&y1, sizeof(y1));
+        ok |= pStream->write(&k, sizeof(k));
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return XYRectangleTypeId; }
 
 private:
     Material* material;
@@ -64,7 +84,7 @@ private:
 class XZRectangle : public Hitable
 {
 public:
-    COMMON_FUNC XZRectangle() {}
+    COMMON_FUNC XZRectangle() = default;
     COMMON_FUNC XZRectangle(float X0, float X1, float Z0, float Z1, float K, Material* mat) :
         material(mat),
         x0(X0),
@@ -73,7 +93,7 @@ public:
         z1(Z1),
         k(K) {}
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         float t = (k - r_in.origin().y()) / r_in.direction().y();
         if (t < t0 || t > t1) return false;
@@ -91,13 +111,13 @@ public:
         return true;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         bbox = AABB<float>(Vector3f(x0, k-RECT_TOLERANCE, z0), Vector3f(x1, k+RECT_TOLERANCE, z1));
         return true;
     }
 
-    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const
+    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v) const override
     {
         HitRecord rec;
         if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec))
@@ -111,11 +131,30 @@ public:
             return 0;
     }
 
-    COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const
+    COMMON_FUNC Vector3f random(const Vector3f& o, RNG& rng) const override
     {
         Vector3f randPoint = Vector3f(x0 + rng.rand() * (x1-x0), k, z0 + rng.rand() * (z1-z0));
         return randPoint - o;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= material->serialize(pStream);
+        ok |= pStream->write(&x0, sizeof(x0));
+        ok |= pStream->write(&x1, sizeof(x1));
+        ok |= pStream->write(&z0, sizeof(z0));
+        ok |= pStream->write(&z1, sizeof(z1));
+        ok |= pStream->write(&k, sizeof(k));
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return XZRectangleTypeId; }
 
 private:
     Material* material;
@@ -125,7 +164,7 @@ private:
 class YZRectangle : public Hitable
 {
 public:
-    COMMON_FUNC YZRectangle() {}
+    COMMON_FUNC YZRectangle() = default;
     COMMON_FUNC YZRectangle(float Y0, float Y1, float Z0, float Z1, float K, Material* mat) :
         material(mat),
         y0(Y0),
@@ -134,7 +173,7 @@ public:
         z1(Z1),
         k(K) {}
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         float t = (k - r_in.origin().x()) / r_in.direction().x();
         if (t < t0 || t > t1) return false;
@@ -152,11 +191,30 @@ public:
         return true;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         bbox = AABB<float>(Vector3f(k-RECT_TOLERANCE, y0, z0), Vector3f(k+RECT_TOLERANCE, y1, z1));
         return true;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= material->serialize(pStream);
+        ok |= pStream->write(&y0, sizeof(y0));
+        ok |= pStream->write(&y1, sizeof(y1));
+        ok |= pStream->write(&z0, sizeof(z0));
+        ok |= pStream->write(&z1, sizeof(z1));
+        ok |= pStream->write(&k, sizeof(k));
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return YZRectangleTypeId; }
 
 private:
     Material* material;
@@ -166,10 +224,10 @@ private:
 class FlipNormals : public Hitable
 {
 public:
-    COMMON_FUNC FlipNormals(Hitable* p) :
+    COMMON_FUNC explicit FlipNormals(Hitable* p) :
         hitable(p) {}
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         if (hitable->hit(r_in, t0, t1, rec))
         {
@@ -179,10 +237,24 @@ public:
         return false;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         return hitable->bounds(t0, t1, bbox);
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= hitable->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return FlipNormalsTypeId; }
 
 private:
     Hitable* hitable;
@@ -191,7 +263,7 @@ private:
 class Box : public Hitable
 {
 public:
-    COMMON_FUNC Box() {}
+    COMMON_FUNC Box() = default;
     COMMON_FUNC Box(const Vector3f& p0, const Vector3f& p1, Material* mat) :
         pmin(p0),
         pmax(p1)
@@ -207,16 +279,32 @@ public:
         child = new HitableList(i, hl);
     }
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         return child->hit(r_in, t0, t1, rec);
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         bbox = AABB<float>(pmin, pmax);
         return true;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= pmin.serialize(pStream);
+        ok |= pmax.serialize(pStream);
+        ok |= child->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return BoxTypeId; }
 
 private:
     Vector3f pmin, pmax;
@@ -231,7 +319,7 @@ public:
         offset(displacement)
     {}
 
-    COMMON_FUNC virtual bool hit(const Rayf &r_in, float t0, float t1, HitRecord &rec) const
+    COMMON_FUNC bool hit(const Rayf &r_in, float t0, float t1, HitRecord &rec) const override
     {
         Rayf movedR(r_in.origin() - offset, r_in.direction(), r_in.time());
         if (hitable->hit(movedR, t0, t1, rec))
@@ -242,7 +330,7 @@ public:
         return false;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float> &bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float> &bbox) const override
     {
         if (hitable->bounds(t0, t1, bbox))
         {
@@ -251,6 +339,21 @@ public:
         }
         return false;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= hitable->serialize(pStream);
+        ok |= offset.serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return TranslateTypeId; }
 
 private:
     Hitable* hitable;
@@ -294,7 +397,7 @@ public:
         bbox = AABB<float>(min, max);
     }
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         auto origin = r_in.origin();
         auto direction = r_in.direction();
@@ -321,11 +424,29 @@ public:
         return false;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         bbox = this->bbox;
         return hasBox;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= hitable->serialize(pStream);
+        ok |= pStream->write(&sinTheta, sizeof(sinTheta));
+        ok |= pStream->write(&cosTheta, sizeof(cosTheta));
+        ok |= pStream->write(&hasBox, sizeof(hasBox));
+        ok |= bbox.serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return RotateYTypeId; }
 
 private:
     Hitable* hitable;

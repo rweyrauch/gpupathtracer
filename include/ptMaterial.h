@@ -36,6 +36,15 @@ COMMON_FUNC inline T schlick(T cs, T ri)
     return r0 + (1 - r0) * Pow((1 - cs), 5);
 }
 
+enum MaterialTypeId
+{
+  LambertianTypeId,
+  MetalTypeId,
+  DielectricTypeId,
+  DiffuseLightTypeId,
+  IsotropicTypeId
+};
+
 class Material
 {
 public:
@@ -44,6 +53,9 @@ public:
     COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const = 0;
     COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const { return 0; }
     COMMON_FUNC virtual Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const { return Vector3f(0, 0, 0); }
+    COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
+    COMMON_FUNC virtual int typeId() const = 0;
+
 };
 
 class Lambertian : public Material
@@ -52,7 +64,7 @@ public:
     COMMON_FUNC Lambertian(Texture* a) :
         albedo(a) { }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const
+    COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
     {
         srec.isSpecular = false;
         srec.attenuation = albedo->value(rec.uv, rec.p);
@@ -61,12 +73,26 @@ public:
         return true;
     }
 
-    COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const
+    COMMON_FUNC float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const override
     {
         float cosine = dot(rec.normal, unit_vector(scattered.direction()));
         if (cosine < 0) return 0;
         return cosine / CUDART_PI_F;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= albedo->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return LambertianTypeId; }
 
 private:
     Texture* albedo;
@@ -82,7 +108,7 @@ public:
         if (f < 1) { fuzz = f; }
     }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const
+    COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
     {
         Vector3f reflected = reflect(unit_vector(r_in.direction()), rec.normal);
         srec.specularRay = Rayf(rec.p, reflected + fuzz * randomInUnitSphere(rng));
@@ -92,6 +118,21 @@ public:
         srec.cosinePdf = false;
         return true;
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= albedo.serialize(pStream);
+        ok |= pStream->write(&fuzz, sizeof(fuzz));
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return MetalTypeId; }
 
 private:
     Vector3f albedo;
@@ -104,7 +145,7 @@ public:
     COMMON_FUNC Dielectric(float ri) :
         refIndex(ri) { }
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const
+    COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
     {
         srec.isSpecular = true;
         //srec.pdf = nullptr;
@@ -146,6 +187,20 @@ public:
         return true;
     }
 
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= pStream->write(&refIndex, sizeof(refIndex));
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return DielectricTypeId; }
+
 private:
     float refIndex;
 };
@@ -156,17 +211,31 @@ public:
     COMMON_FUNC DiffuseLight(Texture* a) :
         emit(a) {}
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const
+    COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
     {
         return false;
     }
-    COMMON_FUNC virtual Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const
+    COMMON_FUNC Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const override
     {
         if (dot(rec.normal, r_in.direction()) < 0)
             return emit->value(uv, p);
         else
             return Vector3f(0, 0, 0);
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= emit->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return DiffuseLightTypeId; }
 
 private:
     Texture* emit;
@@ -175,10 +244,10 @@ private:
 class Isotropic : public Material
 {
 public:
-    COMMON_FUNC Isotropic(Texture* a) :
+    COMMON_FUNC explicit Isotropic(Texture* a) :
         albedo(a) {}
 
-    COMMON_FUNC virtual bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const
+    COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
     {
         // TODO: fix this for new ScatterRecord
         srec.isSpecular = false;
@@ -188,13 +257,51 @@ public:
         return true;
     }
 
-    COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const
+    COMMON_FUNC float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const override
     {
         return 1.0f / (4.0f * CUDART_PI_F);
     }
 
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= albedo->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return IsotropicTypeId; }
+
 private:
     Texture* albedo;
 };
+
+inline COMMON_FUNC Material* CreateMaterial(Stream* pStream)
+{
+    if (pStream == nullptr )
+        return nullptr;
+
+    Material* material = nullptr;
+
+    int typeId;
+    bool ok = pStream->read(&typeId, sizeof(typeId));
+    switch (typeId)
+    {
+    case LambertianTypeId:
+        break;
+    case MetalTypeId:
+    case DielectricTypeId:
+    case DiffuseLightTypeId:
+    case IsotropicTypeId:
+        break;
+    default:
+        break;
+    }
+    return material;
+}
 
 #endif //PATHTRACER_MATERIAL_H

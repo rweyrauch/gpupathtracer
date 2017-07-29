@@ -13,6 +13,7 @@
 #include <math_constants.h>
 #include "ptCudaCommon.h"
 #include "ptVector3.h"
+#include "ptStream.h"
 
 class RNG
 {
@@ -20,6 +21,9 @@ public:
     COMMON_FUNC RNG() {}
 
     COMMON_FUNC virtual float rand() = 0;
+
+    COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
+
 };
 
 class SimpleRng : public RNG
@@ -30,7 +34,7 @@ public:
         seed1(s1)
     {}
 
-    COMMON_FUNC float rand()
+    COMMON_FUNC float rand() override
     {
         seed0 = 36969 * ((seed0) & 65535) + ((seed0) >> 16);  // hash the seeds using bitwise AND and bitshifts
         seed1 = 18000 * ((seed1) & 65535) + ((seed1) >> 16);
@@ -47,6 +51,12 @@ public:
 
         return ((res.f - 2.0f) / 2.0f);
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        return false;
+    }
+
 private:
     unsigned int seed0, seed1;
 };
@@ -61,7 +71,7 @@ public:
 #endif
     }
 
-    COMMON_FUNC float rand()
+    COMMON_FUNC float rand() override
     {
 #ifndef __CUDA_ARCH__
         return (float)drand48();
@@ -69,6 +79,12 @@ public:
         return 0;
 #endif
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        return false;
+    }
+
 };
 
 

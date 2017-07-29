@@ -30,10 +30,10 @@
 
 #ifdef __CUDA_ARCH__
     __device__ AmbientLight* g_ambientLight = NULL;
-    __device__ Camera g_cam;
+    __device__ Camera* g_cam;
 #else
     AmbientLight* g_ambientLight = NULL;
-    Camera g_cam;
+    Camera* g_cam;
 #endif
 
 
@@ -150,7 +150,7 @@ COMMON_FUNC Vector3f render_pixel(Hitable** world, Hitable** lightShapes, int x,
     {
         float u = (x + rng.rand()) / float(nx);
         float v = (y + rng.rand()) / float(ny);
-        Rayf r = g_cam.getRay(u, v, rng);
+        Rayf r = g_cam->getRay(u, v, rng);
         accumCol += deNan(color(r, *world, *lightShapes, rng, maxDepth));
     }
     accumCol /= float(ns);
@@ -190,7 +190,7 @@ COMMON_FUNC void simple_spheres(Hitable** world, Hitable** lightShapes, float as
     *world = new HitableList(i, list);
     *lightShapes = nullptr;
 
-    g_cam = Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
+    g_cam = new Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
 
     delete g_ambientLight;
     g_ambientLight = new SkyAmbient();
@@ -202,7 +202,7 @@ COMMON_FUNC void simple_light(Hitable** world, Hitable** lightShapes, float aspe
     const Vector3f lookAt(0, 0, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
     Texture* noise = new NoiseTexture(1.0f);
     int i = 0;
@@ -230,7 +230,7 @@ COMMON_FUNC void random_scene(Hitable** world, Hitable** lightShapes, float aspe
     const Vector3f lookAt(0, 0, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 20, aspect, aperture, dist_to_focus, 0.0, 1.0);
+    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 20, aspect, aperture, dist_to_focus, 0.0, 1.0);
 
     SimpleRng rng(42, 13);
 
@@ -301,7 +301,7 @@ COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShapes, float aspec
     const Vector3f lookAt(278, 278, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
     delete g_ambientLight;
     g_ambientLight = new SkyAmbient();
@@ -334,7 +334,7 @@ COMMON_FUNC void cornell_box_spheres(Hitable **world, Hitable** lightShapes, flo
     const Vector3f lookAt(278, 278, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
     delete g_ambientLight;
     g_ambientLight = new ConstantAmbient();

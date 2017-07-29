@@ -16,13 +16,13 @@
 
 class HitableList : public Hitable {
 public:
-    COMMON_FUNC HitableList() { }
+    COMMON_FUNC HitableList() = default;
 
     COMMON_FUNC HitableList(int c, Hitable** l) :
         count(c),
         list(l) {}
 
-    COMMON_FUNC virtual bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec) const override
     {
         HitRecord temp_rec;
         bool hit_anything = false;
@@ -39,7 +39,7 @@ public:
         return hit_anything;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         if (count == 0) return false;
 
@@ -62,7 +62,7 @@ public:
         return true;
     }
 
-    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const
+    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v) const override
     {
         float weight = 1 / (float)count;
         float sum = 0;
@@ -73,11 +73,28 @@ public:
         return sum;
     }
 
-    COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const
+    COMMON_FUNC Vector3f random(const Vector3f& o, RNG& rng) const override
     {
         auto index = int(rng.rand() * count);
         return list[index]->random(o, rng);
     }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= pStream->write(&count, sizeof(count));
+        for (int i = 0; i < count; i++)
+        {
+            ok |= list[i]->serialize(pStream);
+        }
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return ListTypeId; }
 
 private:
     int count;

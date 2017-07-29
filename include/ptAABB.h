@@ -13,12 +13,13 @@
 #include "ptCudaCommon.h"
 #include "ptVector3.h"
 #include "ptRay.h"
+#include "ptStream.h"
 
 template <typename T>
 class AABB
 {
 public:
-    COMMON_FUNC AABB() {}
+    COMMON_FUNC AABB() = default;
     COMMON_FUNC AABB(const Vector3<T>& a, const Vector3<T>& b) :
         m_min(a),
         m_max(b) {}
@@ -44,6 +45,17 @@ public:
             if (tmax <= tmin) return false;
         }
         return true;
+    }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = m_min.serialize(pStream);
+        ok |= m_max.serialize(pStream);
+
+        return ok;
     }
 
 protected:

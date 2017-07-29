@@ -19,7 +19,7 @@
 
 class Camera {
 public:
-    COMMON_FUNC Camera() {}
+    COMMON_FUNC Camera() = default;
 
     COMMON_FUNC Camera(float vfov, float aspect) :
         origin(0, 0, 0.),
@@ -61,6 +61,25 @@ public:
         Vector3f offset = u * rd.x() + v * rd.y();
         float time = time0 + rng.rand() * (time1 - time0);
         return Rayf(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset, time);
+    }
+
+    COMMON_FUNC virtual bool serialize(Stream* pStream) const
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = origin.serialize(pStream);
+        ok |= lowerLeftCorner.serialize(pStream);
+        ok |= horizontal.serialize(pStream);
+        ok |= vertical.serialize(pStream);
+        ok |= u.serialize(pStream);
+        ok |= v.serialize(pStream);
+        ok |= w.serialize(pStream);
+        ok |= pStream->write(&time0, sizeof(time0));
+        ok |= pStream->write(&time1, sizeof(time1));
+        ok |= pStream->write(&lens_radius, sizeof(lens_radius));
+
+        return ok;
     }
 
 private:

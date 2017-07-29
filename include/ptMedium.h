@@ -10,6 +10,7 @@
 #ifndef PATHTRACER_MEDIUM_H
 #define PATHTRACER_MEDIUM_H
 
+#include <cfloat>
 #include "ptCudaCommon.h"
 #include "ptHitable.h"
 #include "ptTexture.h"
@@ -25,7 +26,7 @@ public:
         phaseFunction = new Isotropic(a);
     }
 
-    COMMON_FUNC virtual bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
     {
         HitRecord rec1, rec2;
         if (boundary->hit(r_in, -FLT_MAX, FLT_MAX, rec1))
@@ -51,11 +52,28 @@ public:
         return false;
     }
 
-    COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const
+    COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
     {
         return boundary->bounds(t0, t1, bbox);
     }
 
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= boundary->serialize(pStream);
+        ok |= pStream->write(&density, sizeof(density));
+        ok |= phaseFunction->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC int typeId() const override { return MediumTypeId; }
+
+private:
     Hitable* boundary;
     float density;
     Material* phaseFunction;

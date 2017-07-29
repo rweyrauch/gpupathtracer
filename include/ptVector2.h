@@ -13,6 +13,7 @@
 #include <cmath>
 #include "ptCudaCommon.h"
 #include "ptMath.h"
+#include "ptStream.h"
 
 template <typename T>
 class Vector2 {
@@ -100,6 +101,14 @@ public:
         T k = 1 / length();
         e[0] *= k;
         e[1] *= k;
+    }
+
+    COMMON_FUNC virtual bool serialize(Stream* pStream) const
+    {
+        if (pStream == nullptr)
+            return false;
+
+        return pStream->write(e, sizeof(e));
     }
 
     T e[2];
