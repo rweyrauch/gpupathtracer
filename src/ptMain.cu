@@ -20,13 +20,18 @@
 #include "ptHitableList.h"
 #include "ptAmbientLight.h"
 #include "ptRay.h"
+#include "ptBVH.h"
 #include "ptCamera.h"
 #include "ptMaterial.h"
+#include "ptMedium.h"
 #include "ptProgress.h"
 #include "cxxopts.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #ifdef __CUDA_ARCH__
     __device__ AmbientLight* g_ambientLight = NULL;
@@ -95,7 +100,7 @@ COMMON_FUNC Vector3f color(const Rayf& r_in, Hitable* world, Hitable* lightShape
     for (int depth = 0; depth < maxDepth; depth++)
     {
         HitRecord rec;
-        if (world->hit(currentRay, 0.001f, FLT_MAX, rec))
+        if (world->hit(currentRay, 0.001f, FLT_MAX, rec, rng))
         {
             ScatterRecord srec;
             auto emitted = rec.material->emitted(currentRay, rec, rec.uv, rec.p);
@@ -115,14 +120,14 @@ COMMON_FUNC Vector3f color(const Rayf& r_in, Hitable* world, Hitable* lightShape
                         HitablePdf plight(lightShape, rec.p);
                         MixturePdf p(&plight, &pdf);
                         auto scattered = Rayf(rec.p, p.generate(rng), currentRay.time());
-                        float pdfValue = p.value(scattered.direction());
+                        float pdfValue = p.value(scattered.direction(), rng);
                         accumCol *= (emitted + (srec.attenuation * rec.material->scatteringPdf(currentRay, rec, scattered)) / pdfValue);
                         currentRay = scattered;
                     }
                     else
                     {
                         auto scattered = Rayf(rec.p, srec.cosinePdf ? pdf.generate(rng) : pdf2.generate(rng), currentRay.time());
-                        float pdfValue = srec.cosinePdf ? pdf.value(scattered.direction()) : pdf2.value(scattered.direction());
+                        float pdfValue = srec.cosinePdf ? pdf.value(scattered.direction(), rng) : pdf2.value(scattered.direction(), rng);
                         accumCol *= (emitted + (srec.attenuation * rec.material->scatteringPdf(currentRay, rec, scattered)) / pdfValue);
                         currentRay = scattered;
                     }
@@ -341,69 +346,73 @@ COMMON_FUNC void cornell_box_spheres(Hitable **world, Hitable** lightShapes, flo
 
 }
 
-/*
 COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
 {
     const Vector3f lookFrom(478, 278, -600); //(278, 278, -800); //(13, 2, 3);
     const Vector3f lookAt(278, 278, 0); //(0, 1, 0);
     const float dist_to_focus = 10.0f;
     const float aperture = 0.0f;
-    g_cam = Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
-
-    int i = 0;
-    Hitable **list = new Hitable*[8];
+    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
     int nb = 20;
+
     Material* white = new Lambertian(new ConstantTexture(Vector3f(0.73, 0.73, 0.73)));
     Material* ground = new Lambertian(new ConstantTexture(Vector3f(0.48, 0.83, 0.53)));
-    std::vector<Hitable*> boxList, boxList2;
+    Hitable** boxList = new Hitable*[nb*nb];
+
+    SimpleRng rng(42, 13);
+
+    int bi = 0;
     for (int i = 0; i < nb; i++)
     {
         for (int j = 0; j < nb; j++)
         {
-            double w = 100;
-            double x0 = -1000 + i*w;
-            double z0 = -1000 + j*w;
-            double y0 = 0;
-            double x1 = x0 + w;
-            double y1 = 100*(drand48()+0.01);
-            double z1 = z0 + w;
-            boxList.push_back(new Box(Vector3(x0, y0, z0), Vector3(x1, y1, z1), ground));
+            float w = 100;
+            float x0 = -1000 + i*w;
+            float z0 = -1000 + j*w;
+            float y0 = 0;
+            float x1 = x0 + w;
+            float y1 = 100*(rng.rand()+0.01f);
+            float z1 = z0 + w;
+            boxList[bi++] = new Box(Vector3f(x0, y0, z0), Vector3f(x1, y1, z1), ground);
         }
     }
 
-    list.push_back(new BVH(boxList, 0, 1));
-    Material* light = new DiffuseLight(new ConstantTexture(Vector3(6, 6, 6)));
-    list.push_back(new FlipNormals(new XZRectangle(123, 423, 147, 412, 554, light)));
-    Vector3 center(400, 400, 200);
-    list.push_back(new MovingSphere(center, center+Vector3(30, 0, 0), 0, 1, 50, new Lambertian(new ConstantTexture(Vector3(0.7, 0.3, 0.1)))));
-    list.push_back(new Sphere(Vector3(260, 150, 45), 50, new Dielectric(1.5)));
-    list.push_back(new Sphere(Vector3(0, 150, 145), 50, new Metal(Vector3(0.8, 0.8, 0.9), 10)));
-    Hitable* boundary = new Sphere(Vector3(360, 150, 145), 70, new Dielectric(1.5));
-    list.push_back(boundary);
-    list.push_back(new ConstantMedium(boundary, 0.02, new ConstantTexture(Vector3(0.2, 0.4, 0.9))));
-    boundary = new Sphere(Vector3(0, 0, 0), 5000, new Dielectric(1.5));
-    list.push_back(new ConstantMedium(boundary, 0.0001, new ConstantTexture(Vector3(1.0, 1.0, 1.0))));
-    int nx, ny, nz;
-    unsigned char* tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nz, 0);
-    Material* emat = new Lambertian(new ImageTexture(tex_data, nx, ny));
-    list.push_back(new Sphere(Vector3(400, 200, 400), 100, emat));
+    int i = 0;
+    Hitable **list = new Hitable*[12];
+    list[i++] = new BVH(boxList, bi, 0, 1, rng);
+    Material* light = new DiffuseLight(new ConstantTexture(Vector3f(6, 6, 6)));
+    list[i++] = new FlipNormals(new XZRectangle(123, 423, 147, 412, 554, light));
+    Vector3f center(400, 400, 200);
+    list[i++] = new MovingSphere(center, center+Vector3f(30, 0, 0), 0, 1, 50, new Lambertian(new ConstantTexture(Vector3f(0.7, 0.3, 0.1))));
+    list[i++] = new Sphere(Vector3f(260, 150, 45), 50, new Dielectric(1.5));
+    list[i++] = new Sphere(Vector3f(0, 150, 145), 50, new Metal(Vector3f(0.8, 0.8, 0.9), 10));
+    Hitable* boundary = new Sphere(Vector3f(360, 150, 145), 70, new Dielectric(1.5));
+    list[i++] = boundary;
+    list[i++] = new ConstantMedium(boundary, 0.02, new ConstantTexture(Vector3f(0.2, 0.4, 0.9)));
+    boundary = new Sphere(Vector3f(0, 0, 0), 5000, new Dielectric(1.5));
+    list[i++] = new ConstantMedium(boundary, 0.0001, new ConstantTexture(Vector3f(1.0, 1.0, 1.0)));
+    //int nx, ny, nz;
+    //unsigned char* tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nz, 0);
+    //Material* emat = new Lambertian(new ImageTexture(tex_data, nx, ny));
+    //list[i++] = new Sphere(Vector3f(400, 200, 400), 100, emat);
     Texture* pertext = new NoiseTexture(0.1);
-    list.push_back(new Sphere(Vector3(220, 280, 300), 80, new Lambertian(pertext)));
+    list[i++] = new Sphere(Vector3f(220, 280, 300), 80, new Lambertian(pertext));
     int ns = 1000;
+    Hitable** boxList2 = new Hitable*[ns];
+
     for (int j = 0; j < ns; j++)
     {
-        boxList2.push_back(new Sphere(Vector3(165*drand48(), 165*drand48(), 165*drand48()), 10, white));
+        boxList2[j] = new Sphere(Vector3f(165*rng.rand(), 165*rng.rand(), 165*rng.rand()), 10, white);
     }
-    list.push_back(new Translate(new RotateY(new BVH(boxList2, 0.0, 1.0), 15), Vector3(-100, 270, 395)));
+    list[i++] = new Translate(new RotateY(new BVH(boxList2, ns, 0.0f, 1.0f, rng), 15), Vector3f(-100, 270, 395));
 
-    lights.push_back(new XZRectangle(123, 423, 147, 412, 554, nullptr));
+    *lightShapes = new XZRectangle(123, 423, 147, 412, 554, nullptr);
     //lights.push_back(new Sphere(Vector3(360, 150, 145), 70, nullptr));
     //lights.push_back(new Sphere(Vector3(0, 0, 0), 5000, nullptr));
 
-    return new HitableList(list);
+    *world = new HitableList(i, list);
 }
-*/
 
 __global__ void allocate_world_kernel(Hitable** world, Hitable** lightShapes, float aspect)
 {

@@ -22,14 +22,14 @@ public:
         count(c),
         list(l) {}
 
-    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec, RNG& rng) const override
     {
         HitRecord temp_rec;
         bool hit_anything = false;
         float closest_so_far = tmax;
         for (int i = 0; i < count; i++)
         {
-            if (list[i]->hit(r, tmin, closest_so_far, temp_rec))
+            if (list[i]->hit(r, tmin, closest_so_far, temp_rec, rng))
             {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
@@ -47,8 +47,8 @@ public:
         bool first = list[0]->bounds(t0, t1, tempBox);
         if (!first)
             return false;
-        else
-            bbox = tempBox;
+
+        bbox = tempBox;
 
         for (int i = 0; i < count; i++)
         {
@@ -62,13 +62,13 @@ public:
         return true;
     }
 
-    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v) const override
+    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const override
     {
         float weight = 1 / (float)count;
         float sum = 0;
         for (int i = 0; i < count; i++)
         {
-            sum += weight * list[i]->pdfValue(o, v);
+            sum += weight * list[i]->pdfValue(o, v, rng);
         }
         return sum;
     }
@@ -97,8 +97,8 @@ public:
     COMMON_FUNC int typeId() const override { return ListTypeId; }
 
 private:
-    int count;
-    Hitable** list;
+    int count = 0;
+    Hitable** list = nullptr;
 };
 
 #endif //PATHTRACER_HITABLELIST_H

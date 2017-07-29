@@ -10,6 +10,7 @@
 #ifndef PATHTRACER_TEXTURE_H
 #define PATHTRACER_TEXTURE_H
 
+#include <math_functions.h>
 #include "ptCudaCommon.h"
 #include "ptVector2.h"
 #include "ptVector3.h"

@@ -108,7 +108,7 @@ COMMON_FUNC inline Vector3f randomCosineDirection(RNG& rng)
     float r1 = rng.rand();
     float r2 = rng.rand();
     float z = Sqrt(1 - r2);
-    float phi = 2 * M_PI * r1;
+    float phi = 2 * CUDART_PI_F * r1;
     float x = Cos(phi) * 2 * Sqrt(r2);
     float y = Sin(phi) * 2 * Sqrt(r2);
     return Vector3f(x, y, z);
@@ -119,7 +119,7 @@ COMMON_FUNC inline Vector3f randomToUnitSphere(float radius, float distSqrd, RNG
     float r1 = rng.rand();
     float r2 = rng.rand();
     float z = 1 + r2 * (Sqrt(1 - radius*radius/distSqrd) - 1);
-    float phi = 2 * M_PI * r1;
+    float phi = 2 * CUDART_PI_F * r1;
     float x = Cos(phi) * Sqrt(1-z*z);
     float y = Sin(phi) * Sqrt(1-z*z);
     return Vector3f(x, y, z);

@@ -61,7 +61,7 @@ public:
 class Lambertian : public Material
 {
 public:
-    COMMON_FUNC Lambertian(Texture* a) :
+    COMMON_FUNC explicit Lambertian(Texture* a) :
         albedo(a) { }
 
     COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
@@ -142,7 +142,7 @@ private:
 class Dielectric : public Material
 {
 public:
-    COMMON_FUNC Dielectric(float ri) :
+    COMMON_FUNC explicit Dielectric(float ri) :
         refIndex(ri) { }
 
     COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override
@@ -208,7 +208,7 @@ private:
 class DiffuseLight : public Material
 {
 public:
-    COMMON_FUNC DiffuseLight(Texture* a) :
+    COMMON_FUNC explicit DiffuseLight(Texture* a) :
         emit(a) {}
 
     COMMON_FUNC bool scatter(const Rayf& r_in, const HitRecord& rec, ScatterRecord& srec, RNG& rng) const override

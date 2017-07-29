@@ -41,13 +41,13 @@ BVH::BVH(Hitable** list, int length, float time0, float time1, RNG& rng)
     m_bbox = join<float>(boxLeft, boxRight);
 }
 
-bool BVH::hit(const Rayf &r, float tmin, float tmax, HitRecord &rec) const
+bool BVH::hit(const Rayf &r, float tmin, float tmax, HitRecord &rec, RNG& rng) const
 {
     if (m_bbox.hit(r, tmin, tmax))
     {
         HitRecord leftRec, rightRec;
-        bool hitLeft = left->hit(r, tmin, tmax, leftRec);
-        bool hitRight = right->hit(r, tmin, tmax, rightRec);
+        bool hitLeft = left->hit(r, tmin, tmax, leftRec, rng);
+        bool hitRight = right->hit(r, tmin, tmax, rightRec, rng);
         if (hitLeft && hitRight)
         {
             if (leftRec.t < rightRec.t)
@@ -78,10 +78,10 @@ bool BVH::bounds(float t0, float t1, AABB<float> &bbox) const
     return true;
 }
 
-float BVH::pdfValue(const Vector3f& o, const Vector3f& v) const
+float BVH::pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const
 {
     float weight = 0.5f;
-    float sum = weight * left->pdfValue(o, v) + weight * right->pdfValue(o, v);
+    float sum = weight * left->pdfValue(o, v, rng) + weight * right->pdfValue(o, v, rng);
     return sum;
 }
 

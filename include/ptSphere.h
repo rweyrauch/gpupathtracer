@@ -36,7 +36,7 @@ public:
         radius(r),
         material(m) { }
 
-    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec, RNG& rng) const override
     {
         Vector3f oc = r.origin() - center;
         float a = dot(r.direction(), r.direction());
@@ -72,10 +72,10 @@ public:
         return true;
     }
 
-    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v) const override
+    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const override
     {
         HitRecord rec;
-        if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec))
+        if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec, rng))
         {
             float cosThetaMax = Sqrt(1 - radius * radius / (center - o).squared_length());
             float solidAngle = 2 * CUDART_PI_F * (1 - cosThetaMax);
@@ -127,7 +127,7 @@ public:
         material(mtl)
     {}
 
-    COMMON_FUNC bool hit(const Rayf& ray, float t_min, float t_max, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& ray, float t_min, float t_max, HitRecord& rec, RNG& rng) const override
     {
         Vector3f oc = ray.origin() - center(ray.time());
         float a = dot(ray.direction(), ray.direction());

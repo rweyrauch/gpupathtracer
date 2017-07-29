@@ -49,9 +49,9 @@ class Hitable
 {
 public:
     COMMON_FUNC virtual ~Hitable() = default;
-    COMMON_FUNC virtual bool hit(const Rayf& r, float t_min, float t_max, HitRecord& rec) const = 0;
+    COMMON_FUNC virtual bool hit(const Rayf& r, float t_min, float t_max, HitRecord& rec, RNG& rng) const = 0;
     COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const = 0;
-    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v) const { return 0; }
+    COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const { return 0; }
     COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const { return Vector3f(1, 0, 0); }
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
     COMMON_FUNC virtual int typeId() const = 0;

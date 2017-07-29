@@ -33,7 +33,7 @@ public:
         y1(Y1),
         k(K) {}
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
         float t = (k - r_in.origin().z()) / r_in.direction().z();
         if (t < t0 || t > t1) return false;
@@ -93,7 +93,7 @@ public:
         z1(Z1),
         k(K) {}
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
         float t = (k - r_in.origin().y()) / r_in.direction().y();
         if (t < t0 || t > t1) return false;
@@ -117,10 +117,10 @@ public:
         return true;
     }
 
-    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v) const override
+    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const override
     {
         HitRecord rec;
-        if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec))
+        if (hit(Rayf(o, v), 0.001f, FLT_MAX, rec, rng))
         {
             float area = (x1-x0) * (z1-z0);
             float distSqrd = rec.t * rec.t * v.squared_length();
@@ -173,7 +173,7 @@ public:
         z1(Z1),
         k(K) {}
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
         float t = (k - r_in.origin().x()) / r_in.direction().x();
         if (t < t0 || t > t1) return false;
@@ -227,9 +227,9 @@ public:
     COMMON_FUNC explicit FlipNormals(Hitable* p) :
         hitable(p) {}
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
-        if (hitable->hit(r_in, t0, t1, rec))
+        if (hitable->hit(r_in, t0, t1, rec, rng))
         {
             rec.normal = -rec.normal;
             return true;
@@ -279,9 +279,9 @@ public:
         child = new HitableList(i, hl);
     }
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
-        return child->hit(r_in, t0, t1, rec);
+        return child->hit(r_in, t0, t1, rec, rng);
     }
 
     COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override
@@ -319,10 +319,10 @@ public:
         offset(displacement)
     {}
 
-    COMMON_FUNC bool hit(const Rayf &r_in, float t0, float t1, HitRecord &rec) const override
+    COMMON_FUNC bool hit(const Rayf &r_in, float t0, float t1, HitRecord &rec, RNG& rng) const override
     {
         Rayf movedR(r_in.origin() - offset, r_in.direction(), r_in.time());
-        if (hitable->hit(movedR, t0, t1, rec))
+        if (hitable->hit(movedR, t0, t1, rec, rng))
         {
             rec.p += offset;
             return true;
@@ -397,7 +397,7 @@ public:
         bbox = AABB<float>(min, max);
     }
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
         auto origin = r_in.origin();
         auto direction = r_in.direction();
@@ -409,7 +409,7 @@ public:
         direction[2] = sinTheta*r_in.direction()[0] + cosTheta*r_in.direction()[2];
 
         Rayf rotatedR(origin, direction, r_in.time());
-        if (hitable->hit(rotatedR, t0, t1, rec))
+        if (hitable->hit(rotatedR, t0, t1, rec, rng))
         {
             Vector3f p = rec.p;
             Vector3f normal = rec.normal;

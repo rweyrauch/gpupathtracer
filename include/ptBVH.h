@@ -19,10 +19,10 @@ class BVH : public Hitable
 public:
     COMMON_FUNC BVH(Hitable** list, int length, float time0, float time1, RNG& rng);
 
-    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec) const override;
+    COMMON_FUNC bool hit(const Rayf& r, float tmin, float tmax, HitRecord& rec, RNG& rng) const override;
     COMMON_FUNC bool bounds(float t0, float t1, AABB<float>& bbox) const override;
 
-    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v) const override;
+    COMMON_FUNC float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const override;
     COMMON_FUNC Vector3f random(const Vector3f& o, RNG& rng) const override;
 
     COMMON_FUNC bool serialize(Stream* pStream) const override
@@ -42,8 +42,8 @@ public:
     COMMON_FUNC int typeId() const override { return BVHTypeId; }
 
 private:
-    Hitable* left;
-    Hitable* right;
+    Hitable* left = nullptr;
+    Hitable* right = nullptr;
     AABB<float> m_bbox;
 };
 

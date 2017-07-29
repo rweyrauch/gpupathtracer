@@ -26,19 +26,19 @@ public:
         phaseFunction = new Isotropic(a);
     }
 
-    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec) const override
+    COMMON_FUNC bool hit(const Rayf& r_in, float t0, float t1, HitRecord& rec, RNG& rng) const override
     {
         HitRecord rec1, rec2;
-        if (boundary->hit(r_in, -FLT_MAX, FLT_MAX, rec1))
+        if (boundary->hit(r_in, -FLT_MAX, FLT_MAX, rec1, rng))
         {
-            if (boundary->hit(r_in, rec1.t+0.0001, FLT_MAX, rec2))
+            if (boundary->hit(r_in, rec1.t+0.0001, FLT_MAX, rec2, rng))
             {
                 if (rec1.t < t0) rec1.t = t0;
                 if (rec2.t > t1) rec2.t = t1;
                 if (rec1.t > rec2.t) return false;
                 if (rec1.t < 0) rec1.t = 0;
                 float distInsideBoundary = (rec2.t - rec1.t) * r_in.direction().length();
-                float hitDist = -(1/density) * Log(rand(seed0, seed1));
+                float hitDist = -(1/density) * Log(rng.rand());
                 if (hitDist < distInsideBoundary)
                 {
                     rec.t = rec1.t + hitDist / r_in.direction().length();
