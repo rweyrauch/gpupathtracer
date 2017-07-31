@@ -82,18 +82,18 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream)
+    COMMON_FUNC bool deserialize(Stream *pStream)
     {
         if (pStream == nullptr)
             return false;
 
-        bool ok = origin.unserialize(pStream);
-        ok |= lowerLeftCorner.unserialize(pStream);
-        ok |= horizontal.unserialize(pStream);
-        ok |= vertical.unserialize(pStream);
-        ok |= u.unserialize(pStream);
-        ok |= v.unserialize(pStream);
-        ok |= w.unserialize(pStream);
+        bool ok = origin.deserialize(pStream);
+        ok |= lowerLeftCorner.deserialize(pStream);
+        ok |= horizontal.deserialize(pStream);
+        ok |= vertical.deserialize(pStream);
+        ok |= u.deserialize(pStream);
+        ok |= v.deserialize(pStream);
+        ok |= w.deserialize(pStream);
         ok |= pStream->read(&time0, sizeof(time0));
         ok |= pStream->read(&time1, sizeof(time1));
         ok |= pStream->read(&lens_radius, sizeof(lens_radius));

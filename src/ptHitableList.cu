@@ -64,7 +64,7 @@ bool HitableList::serialize(Stream *pStream) const
     return ok;
 }
 
-bool HitableList::unserialize(Stream *pStream)
+bool HitableList::deserialize(Stream *pStream)
 {
     if (pStream == nullptr)
         return false;

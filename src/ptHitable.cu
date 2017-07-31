@@ -66,7 +66,7 @@ COMMON_FUNC Hitable *Hitable::Create(Stream *pStream)
             return nullptr;
     }
 
-    ok = hitable->unserialize(pStream);
+    ok = hitable->deserialize(pStream);
     if (!ok)
     {
         delete hitable;

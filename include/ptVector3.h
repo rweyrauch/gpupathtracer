@@ -121,7 +121,7 @@ public:
         return pStream->write(e, sizeof(e));
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream)
+    COMMON_FUNC bool deserialize(Stream *pStream)
     {
         if (pStream == nullptr)
             return false;

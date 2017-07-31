@@ -58,13 +58,13 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream)
+    COMMON_FUNC bool deserialize(Stream *pStream)
     {
         if (pStream == nullptr)
             return false;
 
-        bool ok = m_min.unserialize(pStream);
-        ok |= m_max.unserialize(pStream);
+        bool ok = m_min.deserialize(pStream);
+        ok |= m_max.deserialize(pStream);
 
         return ok;
     }

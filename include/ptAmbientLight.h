@@ -29,7 +29,7 @@ public:
     COMMON_FUNC virtual Vector3f emitted(const Rayf& ray) const = 0;
 
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
-    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
+    COMMON_FUNC virtual bool deserialize(Stream *pStream) = 0;
 
     COMMON_FUNC virtual int typeId() const = 0;
 
@@ -62,7 +62,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -101,7 +101,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;

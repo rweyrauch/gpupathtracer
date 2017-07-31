@@ -44,7 +44,7 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override;
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override;
+    COMMON_FUNC bool deserialize(Stream *pStream) override;
 
     COMMON_FUNC int typeId() const override { return XYRectangleTypeId; }
 
@@ -96,7 +96,7 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override;
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override;
+    COMMON_FUNC bool deserialize(Stream *pStream) override;
 
     COMMON_FUNC int typeId() const override { return XZRectangleTypeId; }
 
@@ -128,7 +128,7 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override;
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override;
+    COMMON_FUNC bool deserialize(Stream *pStream) override;
 
     COMMON_FUNC int typeId() const override { return YZRectangleTypeId; }
 
@@ -172,7 +172,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -240,13 +240,13 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
 
-        bool ok = pmin.unserialize(pStream);
-        ok |= pmax.unserialize(pStream);
+        bool ok = pmin.deserialize(pStream);
+        ok |= pmax.deserialize(pStream);
         child = Hitable::Create(pStream);
 
         return ok;
@@ -311,7 +311,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -425,7 +425,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -434,7 +434,7 @@ public:
         bool ok = pStream->read(&sinTheta, sizeof(sinTheta));
         ok |= pStream->read(&cosTheta, sizeof(cosTheta));
         ok |= pStream->read(&hasBox, sizeof(hasBox));
-        ok |= bbox.unserialize(pStream);
+        ok |= bbox.deserialize(pStream);
 
         return ok;
     }

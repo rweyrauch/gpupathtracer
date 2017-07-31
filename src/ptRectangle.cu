@@ -44,7 +44,7 @@ bool XYRectangle::serialize(Stream *pStream) const
     return ok;
 }
 
-bool XYRectangle::unserialize(Stream *pStream)
+bool XYRectangle::deserialize(Stream *pStream)
 {
     if (pStream == nullptr)
         return false;
@@ -95,7 +95,7 @@ bool XZRectangle::serialize(Stream *pStream) const
     return ok;
 }
 
-bool XZRectangle::unserialize(Stream *pStream)
+bool XZRectangle::deserialize(Stream *pStream)
 {
     if (pStream == nullptr)
         return false;
@@ -146,7 +146,7 @@ bool YZRectangle::serialize(Stream *pStream) const
     return ok;
 }
 
-bool YZRectangle::unserialize(Stream *pStream)
+bool YZRectangle::deserialize(Stream *pStream)
 {
     if (pStream == nullptr)
         return false;

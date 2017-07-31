@@ -54,7 +54,7 @@ public:
     COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const { return 0; }
     COMMON_FUNC virtual Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const { return Vector3f(0, 0, 0); }
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
-    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
+    COMMON_FUNC virtual bool deserialize(Stream *pStream) = 0;
     COMMON_FUNC virtual int typeId() const = 0;
 
     COMMON_FUNC static Material* Create(Stream* pStream);
@@ -104,7 +104,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -156,12 +156,12 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
 
-        bool ok = albedo.unserialize(pStream);
+        bool ok = albedo.deserialize(pStream);
         ok |= pStream->read(&fuzz, sizeof(fuzz));
 
         return ok;
@@ -236,7 +236,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -292,7 +292,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -351,7 +351,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;

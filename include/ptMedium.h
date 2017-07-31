@@ -73,7 +73,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;

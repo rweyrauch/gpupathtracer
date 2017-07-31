@@ -55,7 +55,7 @@ public:
     COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const { return 0; }
     COMMON_FUNC virtual Vector3f random(const Vector3f& o, RNG& rng) const { return Vector3f(1, 0, 0); }
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
-    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
+    COMMON_FUNC virtual bool deserialize(Stream *pStream) = 0;
     COMMON_FUNC virtual int typeId() const = 0;
 
     COMMON_FUNC static Hitable* Create(Stream* pStream);

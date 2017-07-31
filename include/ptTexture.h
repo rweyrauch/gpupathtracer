@@ -29,7 +29,7 @@ class Texture
 public:
     COMMON_FUNC virtual Vector3f value(const Vector2f& uv, const Vector3f& p) const = 0;
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
-    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
+    COMMON_FUNC virtual bool deserialize(Stream *pStream) = 0;
     COMMON_FUNC virtual int typeId() const = 0;
 
     COMMON_FUNC static Texture* Create(Stream* pStream);
@@ -61,12 +61,12 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
 
-        bool ok = color.unserialize(pStream);
+        bool ok = color.deserialize(pStream);
 
         return ok;
     }
@@ -110,7 +110,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -157,7 +157,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;
@@ -212,7 +212,7 @@ public:
         return ok;
     }
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override
+    COMMON_FUNC bool deserialize(Stream *pStream) override
     {
         if (pStream == nullptr)
             return false;

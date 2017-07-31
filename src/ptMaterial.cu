@@ -42,7 +42,7 @@ Material* Material::Create(Stream* pStream)
             return nullptr;
     }
 
-    ok = material->unserialize(pStream);
+    ok = material->deserialize(pStream);
     if (!ok)
     {
         delete material;

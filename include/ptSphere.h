@@ -68,7 +68,7 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override;
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override;
+    COMMON_FUNC bool deserialize(Stream *pStream) override;
 
     COMMON_FUNC int typeId() const override { return SphereTypeId; }
 
@@ -110,7 +110,7 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override;
 
-    COMMON_FUNC bool unserialize(Stream* pStream) override;
+    COMMON_FUNC bool deserialize(Stream *pStream) override;
 
     COMMON_FUNC int typeId() const override { return MovingSphereTypeId; }
 

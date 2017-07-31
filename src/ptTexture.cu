@@ -36,7 +36,7 @@ Texture* Texture::Create(Stream* pStream)
             return nullptr;
     }
 
-    ok = texture->unserialize(pStream);
+    ok = texture->deserialize(pStream);
     if (!ok)
     {
         delete texture;

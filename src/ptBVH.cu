@@ -107,7 +107,7 @@ bool BVH::serialize(Stream *pStream) const
     return ok;
 }
 
-bool BVH::unserialize(Stream* pStream)
+bool BVH::deserialize(Stream *pStream)
 {
     if (pStream != nullptr)
         return false;

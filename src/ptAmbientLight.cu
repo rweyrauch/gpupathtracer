@@ -32,7 +32,7 @@ AmbientLight* AmbientLight::Create(Stream* pStream)
             return nullptr;
     }
 
-    ok = light->unserialize(pStream);
+    ok = light->deserialize(pStream);
     if (!ok)
     {
         delete light;

@@ -52,12 +52,12 @@ bool Sphere::serialize(Stream *pStream) const
     return ok;
 }
 
-bool Sphere::unserialize(Stream* pStream)
+bool Sphere::deserialize(Stream *pStream)
 {
     if (pStream == nullptr)
         return false;
 
-    bool ok = center.unserialize(pStream);
+    bool ok = center.deserialize(pStream);
     ok |= pStream->read(&radius, sizeof(radius));
     material = Material::Create(pStream);
     return ok;
@@ -113,13 +113,13 @@ bool MovingSphere::serialize(Stream *pStream) const
     return ok;
 }
 
-bool MovingSphere::unserialize(Stream* pStream)
+bool MovingSphere::deserialize(Stream *pStream)
 {
     if (pStream == nullptr)
         return false;
 
-    bool ok = center0.unserialize(pStream);
-    ok |= center1.unserialize(pStream);
+    bool ok = center0.deserialize(pStream);
+    ok |= center1.deserialize(pStream);
     ok |= pStream->read(&time0, sizeof(time0));
     ok |= pStream->read(&time1, sizeof(time1));
     ok |= pStream->read(&radius, sizeof(radius));
