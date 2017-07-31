@@ -29,7 +29,10 @@ class Texture
 public:
     COMMON_FUNC virtual Vector3f value(const Vector2f& uv, const Vector3f& p) const = 0;
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
+    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
     COMMON_FUNC virtual int typeId() const = 0;
+
+    COMMON_FUNC static Texture* Create(Stream* pStream);
 };
 
 class ConstantTexture : public Texture
@@ -54,6 +57,16 @@ public:
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
         ok |= color.serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = color.unserialize(pStream);
 
         return ok;
     }
@@ -97,6 +110,18 @@ public:
         return ok;
     }
 
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = pStream->read(&scaler, sizeof(scaler));
+        odd = Texture::Create(pStream);
+        even = Texture::Create(pStream);
+
+        return ok;
+    }
+
     COMMON_FUNC int typeId() const override { return CheckerTextureTypeId; }
 
 private:
@@ -130,6 +155,16 @@ public:
         return ok;
     }
 
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = pStream->read(&scale, sizeof(scale));
+
+        return ok;
+    }
+
     COMMON_FUNC int typeId() const override { return NoiseTextureTypeId; }
 
 private:
@@ -141,7 +176,7 @@ class ImageTexture : public Texture
 public:
     COMMON_FUNC ImageTexture() = default;
 
-    COMMON_FUNC ImageTexture(const unsigned char *pixels, int Nx, int Ny) :
+    COMMON_FUNC ImageTexture(unsigned char *pixels, int Nx, int Ny) :
         data(pixels),
         nx(Nx),
         ny(Ny)
@@ -175,36 +210,26 @@ public:
         return ok;
     }
 
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = pStream->read(&nx, sizeof(nx));
+        ok |= pStream->read(&ny, sizeof(ny));
+
+        delete[] data;
+        data = new unsigned char[nx * ny];
+        ok |= pStream->read(data, nx * ny * sizeof(unsigned char));
+
+        return ok;
+    }
+
     COMMON_FUNC int typeId() const override { return ImageTextureTypeId; }
 
 private:
-    const unsigned char *data;
+    unsigned char *data;
     int nx, ny;
 };
-
-inline COMMON_FUNC Texture* CreateTexture(Stream* pStream)
-{
-    if (pStream == nullptr )
-        return nullptr;
-
-    Texture* texture = nullptr;
-
-    int typeId;
-    bool ok = pStream->read(&typeId, sizeof(typeId));
-    switch (typeId)
-    {
-    case ConstantTextureTypeId:
-        break;
-    case CheckerTextureTypeId:
-        break;
-    case NoiseTextureTypeId:
-        break;
-    case ImageTextureTypeId:
-        break;
-    default:
-        break;
-    }
-    return texture;
-}
 
 #endif //PATHTRACER_TEXTURE_H

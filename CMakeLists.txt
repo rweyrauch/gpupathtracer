@@ -41,16 +41,23 @@ set(GPU_SOURCE_FILES
         src/stb_image.h
         src/stb_image_write.h
         src/cxxopts.hpp
+        src/ptAmbientLight.cu
         src/ptNoise.cu
         src/ptBVH.cu
+        src/ptHitable.cu
+        src/ptHitableList.cu
+        src/ptMaterial.cu
         src/ptQuickSort.cu
+        src/ptRectangle.cu
+        src/ptSphere.cu
+        src/ptTexture.cu
         src/ptMain.cu)
 
 set(CUDA_NVCC_FLAGS "-use_fast_math")
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_52,code=sm_52)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11)
-SET(CUDA_SEPARABLE_COMPILATION ON)
+set(CUDA_SEPARABLE_COMPILATION ON)
 
 #set(CUDA_NVCC_FLAGS_DEBUG "-G")
 

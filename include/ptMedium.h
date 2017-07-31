@@ -19,6 +19,8 @@
 class ConstantMedium : public Hitable
 {
 public:
+    COMMON_FUNC ConstantMedium() = default;
+
     COMMON_FUNC ConstantMedium(Hitable* b, float d, Texture* a) :
         boundary(b),
         density(d)
@@ -67,6 +69,18 @@ public:
         ok |= boundary->serialize(pStream);
         ok |= pStream->write(&density, sizeof(density));
         ok |= phaseFunction->serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        boundary = Hitable::Create(pStream);
+        bool ok = pStream->read(&density, sizeof(density));
+        phaseFunction = Material::Create(pStream);
 
         return ok;
     }

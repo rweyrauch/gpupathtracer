@@ -92,3 +92,47 @@ Vector3f BVH::random(const Vector3f& o, RNG& rng) const
     else
         return right->random(o, rng);
 }
+
+bool BVH::serialize(Stream *pStream) const
+{
+    if (pStream != nullptr)
+        return false;
+
+    const int id = typeId();
+    bool ok = pStream->write(&id, sizeof(id));
+    ok |= left->serialize(pStream);
+    ok |= right->serialize(pStream);
+    ok |= m_bbox.serialize(pStream);
+
+    return ok;
+}
+
+bool BVH::unserialize(Stream* pStream)
+{
+    if (pStream != nullptr)
+        return false;
+
+    bool ok = true;
+    if (left != nullptr)
+    {
+        ok |= left->serialize(pStream);
+    }
+    else
+    {
+        const int nullId = -1;
+        pStream->write(&nullId, sizeof(nullId));
+    }
+    if (right != nullptr)
+    {
+        ok |= right->serialize(pStream);
+    }
+    else
+    {
+        const int nullId = -1;
+        pStream->write(&nullId, sizeof(nullId));
+    }
+
+    ok |= m_bbox.serialize(pStream);
+
+    return ok;
+}

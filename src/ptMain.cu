@@ -578,6 +578,18 @@ int main(int argc, char** argv)
         Hitable* lightShapes = NULL;
         cornell_box(&world, &lightShapes, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
 
+        Stream* pStream = new Stream();
+        pStream->create(1024 * 1024 * 16);
+
+        Hitable* pSphere = new Sphere(Vector3f(0, 1, 2), 3, new Lambertian(nullptr));
+        bool ok = pSphere->serialize(pStream);
+        if (ok)
+        {
+            Hitable* clone = Hitable::Create(pStream);
+        }
+        pStream->close();
+        delete pStream;
+
         unsigned int seed0 = 42;
         unsigned int seed1 = 13;
         DRandRng rng(seed0);//, seed1);

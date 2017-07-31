@@ -103,12 +103,20 @@ public:
         e[1] *= k;
     }
 
-    COMMON_FUNC virtual bool serialize(Stream* pStream) const
+    COMMON_FUNC bool serialize(Stream* pStream) const
     {
         if (pStream == nullptr)
             return false;
 
         return pStream->write(e, sizeof(e));
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream)
+    {
+        if (pStream == nullptr)
+            return false;
+
+        return pStream->read(e, sizeof(e));
     }
 
     T e[2];

@@ -58,6 +58,17 @@ public:
         return ok;
     }
 
+    COMMON_FUNC bool unserialize(Stream* pStream)
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = m_min.unserialize(pStream);
+        ok |= m_max.unserialize(pStream);
+
+        return ok;
+    }
+
 protected:
     Vector3<T> m_min;
     Vector3<T> m_max;

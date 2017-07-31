@@ -63,7 +63,7 @@ public:
         return Rayf(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset, time);
     }
 
-    COMMON_FUNC virtual bool serialize(Stream* pStream) const
+    COMMON_FUNC bool serialize(Stream* pStream) const
     {
         if (pStream == nullptr)
             return false;
@@ -78,6 +78,25 @@ public:
         ok |= pStream->write(&time0, sizeof(time0));
         ok |= pStream->write(&time1, sizeof(time1));
         ok |= pStream->write(&lens_radius, sizeof(lens_radius));
+
+        return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream)
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = origin.unserialize(pStream);
+        ok |= lowerLeftCorner.unserialize(pStream);
+        ok |= horizontal.unserialize(pStream);
+        ok |= vertical.unserialize(pStream);
+        ok |= u.unserialize(pStream);
+        ok |= v.unserialize(pStream);
+        ok |= w.unserialize(pStream);
+        ok |= pStream->read(&time0, sizeof(time0));
+        ok |= pStream->read(&time1, sizeof(time1));
+        ok |= pStream->read(&lens_radius, sizeof(lens_radius));
 
         return ok;
     }

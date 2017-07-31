@@ -29,8 +29,11 @@ public:
     COMMON_FUNC virtual Vector3f emitted(const Rayf& ray) const = 0;
 
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
+    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
 
     COMMON_FUNC virtual int typeId() const = 0;
+
+    COMMON_FUNC static AmbientLight* Create(Stream* pStream);
 };
 
 class ConstantAmbient : public AmbientLight
@@ -49,7 +52,24 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override
     {
-        return false;
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+        ok |= color.serialize(pStream);
+
+        return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = color.serialize(pStream);
+
+        return ok;
     }
 
     COMMON_FUNC int typeId() const override { return ConstantAmbientTypeId; }
@@ -72,31 +92,24 @@ public:
 
     COMMON_FUNC bool serialize(Stream* pStream) const override
     {
-        return false;
+        if (pStream == nullptr)
+            return false;
+
+        const int id = typeId();
+        bool ok = pStream->write(&id, sizeof(id));
+
+        return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        return true;
     }
 
     COMMON_FUNC int typeId() const override { return SkyAmbientTypeId; }
 };
-
-inline COMMON_FUNC AmbientLight* CreateAmbientLight(Stream* pStream)
-{
-    if (pStream == nullptr )
-        return nullptr;
-
-    AmbientLight* light = nullptr;
-
-    int typeId;
-    bool ok = pStream->read(&typeId, sizeof(typeId));
-    switch (typeId)
-    {
-    case ConstantAmbientTypeId:
-        break;
-    case SkyAmbientTypeId:
-        break;
-    default:
-        break;
-    }
-    return light;
-}
 
 #endif //PATHTRACER_AMBIENTLIGHT_H

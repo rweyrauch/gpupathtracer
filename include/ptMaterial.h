@@ -54,13 +54,17 @@ public:
     COMMON_FUNC virtual float scatteringPdf(const Rayf& r_in, const HitRecord& rec, const Rayf& scattered) const { return 0; }
     COMMON_FUNC virtual Vector3f emitted(const Rayf& r_in, const HitRecord& rec, const Vector2f& uv, const Vector3f& p) const { return Vector3f(0, 0, 0); }
     COMMON_FUNC virtual bool serialize(Stream* pStream) const = 0;
+    COMMON_FUNC virtual bool unserialize(Stream* pStream) = 0;
     COMMON_FUNC virtual int typeId() const = 0;
 
+    COMMON_FUNC static Material* Create(Stream* pStream);
 };
 
 class Lambertian : public Material
 {
 public:
+    COMMON_FUNC Lambertian() = default;
+
     COMMON_FUNC explicit Lambertian(Texture* a) :
         albedo(a) { }
 
@@ -87,9 +91,27 @@ public:
 
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
-        ok |= albedo->serialize(pStream);
+        if (albedo != nullptr)
+        {
+            ok |= albedo->serialize(pStream);
+        }
+        else
+        {
+            const int nullId = -1;
+            ok |= pStream->write(&nullId, sizeof(nullId));
+        }
 
         return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        albedo = Texture::Create(pStream);
+
+        return true;
     }
 
     COMMON_FUNC int typeId() const override { return LambertianTypeId; }
@@ -101,6 +123,8 @@ private:
 class Metal : public Material
 {
 public:
+    COMMON_FUNC Metal() = default;
+
     COMMON_FUNC Metal(const Vector3f& a, float f) :
         albedo(a),
         fuzz(1)
@@ -132,6 +156,17 @@ public:
         return ok;
     }
 
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = albedo.unserialize(pStream);
+        ok |= pStream->read(&fuzz, sizeof(fuzz));
+
+        return ok;
+    }
+
     COMMON_FUNC int typeId() const override { return MetalTypeId; }
 
 private:
@@ -142,6 +177,8 @@ private:
 class Dielectric : public Material
 {
 public:
+    COMMON_FUNC Dielectric() = default;
+
     COMMON_FUNC explicit Dielectric(float ri) :
         refIndex(ri) { }
 
@@ -199,6 +236,16 @@ public:
         return ok;
     }
 
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        bool ok = pStream->read(&refIndex, sizeof(refIndex));
+
+        return ok;
+    }
+
     COMMON_FUNC int typeId() const override { return DielectricTypeId; }
 
 private:
@@ -208,6 +255,8 @@ private:
 class DiffuseLight : public Material
 {
 public:
+    COMMON_FUNC DiffuseLight() = default;
+
     COMMON_FUNC explicit DiffuseLight(Texture* a) :
         emit(a) {}
 
@@ -230,9 +279,27 @@ public:
 
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
-        ok |= emit->serialize(pStream);
+        if (emit != nullptr)
+        {
+            ok |= emit->serialize(pStream);
+        }
+        else
+        {
+            const int nullId = -1;
+            pStream->write(&nullId, sizeof(nullId));
+        }
 
         return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        emit = Texture::Create(pStream);
+
+        return true;
     }
 
     COMMON_FUNC int typeId() const override { return DiffuseLightTypeId; }
@@ -244,6 +311,8 @@ private:
 class Isotropic : public Material
 {
 public:
+    COMMON_FUNC Isotropic() = default;
+
     COMMON_FUNC explicit Isotropic(Texture* a) :
         albedo(a) {}
 
@@ -269,9 +338,27 @@ public:
 
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
-        ok |= albedo->serialize(pStream);
+        if (albedo != nullptr)
+        {
+            ok |= albedo->serialize(pStream);
+        }
+        else
+        {
+            const int nullId = -1;
+            pStream->write(&nullId, sizeof(nullId));
+        }
 
         return ok;
+    }
+
+    COMMON_FUNC bool unserialize(Stream* pStream) override
+    {
+        if (pStream == nullptr)
+            return false;
+
+        albedo = Texture::Create(pStream);
+
+        return true;
     }
 
     COMMON_FUNC int typeId() const override { return IsotropicTypeId; }
@@ -279,29 +366,5 @@ public:
 private:
     Texture* albedo;
 };
-
-inline COMMON_FUNC Material* CreateMaterial(Stream* pStream)
-{
-    if (pStream == nullptr )
-        return nullptr;
-
-    Material* material = nullptr;
-
-    int typeId;
-    bool ok = pStream->read(&typeId, sizeof(typeId));
-    switch (typeId)
-    {
-    case LambertianTypeId:
-        break;
-    case MetalTypeId:
-    case DielectricTypeId:
-    case DiffuseLightTypeId:
-    case IsotropicTypeId:
-        break;
-    default:
-        break;
-    }
-    return material;
-}
 
 #endif //PATHTRACER_MATERIAL_H
