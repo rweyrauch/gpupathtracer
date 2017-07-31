@@ -19,7 +19,7 @@ AmbientLight* AmbientLight::Create(Stream* pStream)
     int typeId;
     bool ok = pStream->read(&typeId, sizeof(typeId));
     if (!ok) return nullptr;
-    
+
     switch (typeId)
     {
         case ConstantAmbientTypeId:

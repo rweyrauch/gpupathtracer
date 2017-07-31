@@ -133,6 +133,8 @@ private:
 class NoiseTexture : public Texture
 {
 public:
+    COMMON_FUNC NoiseTexture() = default;
+
     COMMON_FUNC explicit NoiseTexture(float sc) :
         scale(sc)
     {}

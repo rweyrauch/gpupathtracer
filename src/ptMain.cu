@@ -581,8 +581,8 @@ int main(int argc, char** argv)
         Stream* pStream = new Stream();
         pStream->create(1024 * 1024 * 16);
 
-        Hitable* pSphere = new Sphere(Vector3f(0, 1, 2), 3, new Lambertian(nullptr));
-        bool ok = pSphere->serialize(pStream);
+        Hitable* pSphere = new Sphere(Vector3f(0, 1, 2), 3, new Lambertian(new ConstantTexture(Vector3f(0.5, 0.7, 0.9))));
+        bool ok = world->serialize(pStream);
         if (ok)
         {
             Hitable* clone = Hitable::Create(pStream);

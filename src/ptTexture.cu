@@ -21,15 +21,26 @@ Texture* Texture::Create(Stream* pStream)
     switch (typeId)
     {
         case ConstantTextureTypeId:
+            texture = new ConstantTexture();
             break;
         case CheckerTextureTypeId:
+            texture = new CheckerTexture();
             break;
         case NoiseTextureTypeId:
+            texture = new NoiseTexture();
             break;
         case ImageTextureTypeId:
+            texture = new ImageTexture();
             break;
         default:
-            break;
+            return nullptr;
+    }
+
+    ok = texture->unserialize(pStream);
+    if (!ok)
+    {
+        delete texture;
+        texture = nullptr;
     }
     return texture;
 }
