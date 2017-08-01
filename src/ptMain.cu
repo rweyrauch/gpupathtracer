@@ -141,7 +141,8 @@ COMMON_FUNC Vector3f color(const Rayf& r_in, Hitable* world, Hitable* lightShape
         }
         else
         {
-            accumCol *= g_ambientLight->emitted(currentRay);
+            if (g_ambientLight != nullptr)
+                accumCol *= g_ambientLight->emitted(currentRay);
             break;
         }
     }
@@ -576,7 +577,7 @@ int main(int argc, char** argv)
         Camera cam;
         Hitable* world = NULL;
         Hitable* lightShapes = NULL;
-        cornell_box(&world, &lightShapes, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
+        final(&world, &lightShapes, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
 
         Stream* pStream = new Stream();
         pStream->create(1024 * 1024 * 16);

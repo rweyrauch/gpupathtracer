@@ -14,7 +14,7 @@
 BVH::BVH(Hitable** list, int length, float time0, float time1, RNG& rng)
 {
     int axis = int(3 * rng.rand());
-    quickSort(list, 0, length, axis);
+    quickSort(list, 0, length-1, axis);
     const auto n = length;
     if (n == 1)
     {

@@ -17,8 +17,8 @@
 
 enum AmbientLightTypeId
 {
-  ConstantAmbientTypeId,
-  SkyAmbientTypeId,
+  ConstantAmbientTypeId = MakeFourCC('C','N','S','T'),
+  SkyAmbientTypeId = MakeFourCC('S','K','Y','A'),
 };
 
 class AmbientLight

@@ -59,6 +59,6 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11)
 set(CUDA_SEPARABLE_COMPILATION ON)
 
-#set(CUDA_NVCC_FLAGS_DEBUG "-G")
+set(CUDA_NVCC_FLAGS_DEBUG "-G")
 
 cuda_add_executable(gpupathtracer ${GPU_SOURCE_FILES})

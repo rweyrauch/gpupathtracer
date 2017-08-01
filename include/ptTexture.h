@@ -18,10 +18,10 @@
 
 enum TextureTypeId
 {
-  ConstantTextureTypeId,
-  CheckerTextureTypeId,
-  NoiseTextureTypeId,
-  ImageTextureTypeId
+  ConstantTextureTypeId = MakeFourCC('C','N','S','T'),
+  CheckerTextureTypeId = MakeFourCC('C','H','E','K'),
+  NoiseTextureTypeId = MakeFourCC('N','O','I','S'),
+  ImageTextureTypeId = MakeFourCC('I','M','A','G')
 };
 
 class Texture

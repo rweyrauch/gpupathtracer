@@ -38,11 +38,11 @@ COMMON_FUNC inline T schlick(T cs, T ri)
 
 enum MaterialTypeId
 {
-  LambertianTypeId,
-  MetalTypeId,
-  DielectricTypeId,
-  DiffuseLightTypeId,
-  IsotropicTypeId
+  LambertianTypeId = MakeFourCC('L','A','M','B'),
+  MetalTypeId = MakeFourCC('M','E','T','L'),
+  DielectricTypeId = MakeFourCC('D','I','E','L'),
+  DiffuseLightTypeId = MakeFourCC('D','I','F','F'),
+  IsotropicTypeId = MakeFourCC('I','S','O','T')
 };
 
 class Material
