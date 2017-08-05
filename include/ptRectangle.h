@@ -24,7 +24,7 @@ const float RECT_TOLERANCE = 0.0001f;
 class XYRectangle : public Hitable
 {
 public:
-    COMMON_FUNC XYRectangle() = default;
+    COMMON_FUNC XYRectangle() {}
 
     COMMON_FUNC XYRectangle(float X0, float X1, float Y0, float Y1, float K, Material* mat) :
         material(mat),
@@ -56,7 +56,7 @@ private:
 class XZRectangle : public Hitable
 {
 public:
-    COMMON_FUNC XZRectangle() = default;
+    COMMON_FUNC XZRectangle() {}
 
     COMMON_FUNC XZRectangle(float X0, float X1, float Z0, float Z1, float K, Material* mat) :
         material(mat),
@@ -108,7 +108,7 @@ private:
 class YZRectangle : public Hitable
 {
 public:
-    COMMON_FUNC YZRectangle() = default;
+    COMMON_FUNC YZRectangle() {}
 
     COMMON_FUNC YZRectangle(float Y0, float Y1, float Z0, float Z1, float K, Material* mat) :
         material(mat),
@@ -140,7 +140,7 @@ private:
 class FlipNormals : public Hitable
 {
 public:
-    COMMON_FUNC FlipNormals() = default;
+    COMMON_FUNC FlipNormals() {}
 
     COMMON_FUNC explicit FlipNormals(Hitable* p) :
         hitable(p) {}
@@ -191,7 +191,7 @@ private:
 class Box : public Hitable
 {
 public:
-    COMMON_FUNC Box() = default;
+    COMMON_FUNC Box() {}
 
     COMMON_FUNC Box(const Vector3f& p0, const Vector3f& p1, Material* mat) :
         pmin(p0),
@@ -262,7 +262,7 @@ private:
 class Translate : public Hitable
 {
 public:
-    COMMON_FUNC Translate() = default;
+    COMMON_FUNC Translate() {}
 
     COMMON_FUNC Translate(Hitable *p, const Vector3f &displacement) :
         hitable(p),
@@ -332,7 +332,7 @@ private:
 class RotateY : public Hitable
 {
 public:
-    COMMON_FUNC RotateY() = default;
+    COMMON_FUNC RotateY() {}
 
     COMMON_FUNC RotateY(Hitable* p, float angle)
     {

@@ -38,7 +38,7 @@ public:
 class ConstantTexture : public Texture
 {
 public:
-    COMMON_FUNC ConstantTexture() = default;
+    COMMON_FUNC ConstantTexture() {}
 
     COMMON_FUNC explicit ConstantTexture(const Vector3f& c) :
         color(c)
@@ -80,7 +80,7 @@ private:
 class CheckerTexture : public Texture
 {
 public:
-    COMMON_FUNC CheckerTexture() = default;
+    COMMON_FUNC CheckerTexture() {}
 
     COMMON_FUNC CheckerTexture(Texture* t0, Texture* t1) :
         odd(t1),
@@ -133,7 +133,7 @@ private:
 class NoiseTexture : public Texture
 {
 public:
-    COMMON_FUNC NoiseTexture() = default;
+    COMMON_FUNC NoiseTexture() {}
 
     COMMON_FUNC explicit NoiseTexture(float sc) :
         scale(sc)
@@ -176,7 +176,7 @@ private:
 class ImageTexture : public Texture
 {
 public:
-    COMMON_FUNC ImageTexture() = default;
+    COMMON_FUNC ImageTexture() {}
 
     COMMON_FUNC ImageTexture(unsigned char *pixels, int Nx, int Ny) :
         data(pixels),
@@ -230,8 +230,8 @@ public:
     COMMON_FUNC int typeId() const override { return ImageTextureTypeId; }
 
 private:
-    unsigned char *data;
-    int nx, ny;
+    unsigned char *data = nullptr;
+    int nx = 0, ny = 0;
 };
 
 #endif //PATHTRACER_TEXTURE_H

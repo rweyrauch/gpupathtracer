@@ -63,7 +63,7 @@ public:
 class Lambertian : public Material
 {
 public:
-    COMMON_FUNC Lambertian() = default;
+    COMMON_FUNC Lambertian() {}
 
     COMMON_FUNC explicit Lambertian(Texture* a) :
         albedo(a) { }
@@ -123,7 +123,7 @@ private:
 class Metal : public Material
 {
 public:
-    COMMON_FUNC Metal() = default;
+    COMMON_FUNC Metal() {}
 
     COMMON_FUNC Metal(const Vector3f& a, float f) :
         albedo(a),
@@ -177,7 +177,7 @@ private:
 class Dielectric : public Material
 {
 public:
-    COMMON_FUNC Dielectric() = default;
+    COMMON_FUNC Dielectric() {}
 
     COMMON_FUNC explicit Dielectric(float ri) :
         refIndex(ri) { }
@@ -255,7 +255,7 @@ private:
 class DiffuseLight : public Material
 {
 public:
-    COMMON_FUNC DiffuseLight() = default;
+    COMMON_FUNC DiffuseLight() {}
 
     COMMON_FUNC explicit DiffuseLight(Texture* a) :
         emit(a) {}
@@ -311,7 +311,7 @@ private:
 class Isotropic : public Material
 {
 public:
-    COMMON_FUNC Isotropic() = default;
+    COMMON_FUNC Isotropic() {}
 
     COMMON_FUNC explicit Isotropic(Texture* a) :
         albedo(a) {}

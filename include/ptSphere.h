@@ -30,7 +30,7 @@ COMMON_FUNC inline void get_uv(const Vector3f& p, Vector2f& uv)
 class Sphere : public Hitable
 {
 public:
-    COMMON_FUNC Sphere() = default;
+    COMMON_FUNC Sphere() {}
 
     COMMON_FUNC Sphere(const Vector3f& cen, float r, Material* m) :
         center(cen),
@@ -81,7 +81,7 @@ private:
 class MovingSphere : public Hitable
 {
 public:
-    COMMON_FUNC MovingSphere() = default;
+    COMMON_FUNC MovingSphere() {}
 
     COMMON_FUNC MovingSphere(const Vector3f& cen0, const Vector3f& cen1, float t0, float t1, float r, Material* mtl) :
         center0(cen0),

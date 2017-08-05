@@ -24,7 +24,7 @@ enum AmbientLightTypeId
 class AmbientLight
 {
 public:
-    COMMON_FUNC virtual ~AmbientLight() = default;
+    COMMON_FUNC virtual ~AmbientLight() {}
 
     COMMON_FUNC virtual Vector3f emitted(const Rayf& ray) const = 0;
 
@@ -81,7 +81,7 @@ private:
 class SkyAmbient : public AmbientLight
 {
 public:
-    COMMON_FUNC SkyAmbient() = default;
+    COMMON_FUNC SkyAmbient() {}
 
     COMMON_FUNC Vector3f emitted(const Rayf& ray) const override
     {

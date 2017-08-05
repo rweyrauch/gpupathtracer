@@ -17,7 +17,7 @@
 class BVH : public Hitable
 {
 public:
-    COMMON_FUNC BVH() = default;
+    COMMON_FUNC BVH() {}
 
     COMMON_FUNC BVH(Hitable** list, int length, float time0, float time1, RNG& rng);
 

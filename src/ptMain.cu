@@ -34,11 +34,11 @@
 #include "stb_image.h"
 
 #ifdef __CUDA_ARCH__
-    __device__ AmbientLight* g_ambientLight = NULL;
-    __device__ Camera* g_cam;
+    __device__ AmbientLight* g_ambientLight = nullptr;
+    __device__ Camera* g_cam = nullptr;
 #else
-    AmbientLight* g_ambientLight = NULL;
-    Camera* g_cam;
+    AmbientLight* g_ambientLight = nullptr;
+    Camera* g_cam = nullptr;
 #endif
 
 
@@ -393,10 +393,13 @@ COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
     list[i++] = new ConstantMedium(boundary, 0.02, new ConstantTexture(Vector3f(0.2, 0.4, 0.9)));
     boundary = new Sphere(Vector3f(0, 0, 0), 5000, new Dielectric(1.5));
     list[i++] = new ConstantMedium(boundary, 0.0001, new ConstantTexture(Vector3f(1.0, 1.0, 1.0)));
-    //int nx, ny, nz;
-    //unsigned char* tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nz, 0);
-    //Material* emat = new Lambertian(new ImageTexture(tex_data, nx, ny));
-    //list[i++] = new Sphere(Vector3f(400, 200, 400), 100, emat);
+#ifdef __CUDA_ARCH__
+#else
+    int nx, ny, nz;
+    unsigned char* tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nz, 0);
+    Material* emat = new Lambertian(new ImageTexture(tex_data, nx, ny));
+    list[i++] = new Sphere(Vector3f(400, 200, 400), 100, emat);
+#endif
     Texture* pertext = new NoiseTexture(0.1);
     list[i++] = new Sphere(Vector3f(220, 280, 300), 80, new Lambertian(pertext));
     int ns = 1000;
@@ -412,12 +415,15 @@ COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
     //lights.push_back(new Sphere(Vector3(360, 150, 145), 70, nullptr));
     //lights.push_back(new Sphere(Vector3(0, 0, 0), 5000, nullptr));
 
+    delete g_ambientLight;
+    g_ambientLight = new ConstantAmbient();
+
     *world = new HitableList(i, list);
 }
 
 __global__ void allocate_world_kernel(Hitable** world, Hitable** lightShapes, float aspect)
 {
-    cornell_box(world, lightShapes, aspect);
+    final(world, lightShapes, aspect);
 }
 
 void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, int ny)
@@ -438,9 +444,9 @@ void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, in
                 {
                     Vector3f col = outImage[i];
 
-                    int ir = int(255.99 * col[0]);
-                    int ig = int(255.99 * col[1]);
-                    int ib = int(255.99 * col[2]);
+                    int ir = Clamp(int(255.99 * col[0]), 0, 255);
+                    int ig = Clamp(int(255.99 * col[1]), 0, 255);
+                    int ib = Clamp(int(255.99 * col[2]), 0, 255);
 
                     of << ir << " " << ig << " " << ib << "\n";
                 }

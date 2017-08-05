@@ -19,7 +19,7 @@
 
 class Camera {
 public:
-    COMMON_FUNC Camera() = default;
+    COMMON_FUNC Camera() {}
 
     COMMON_FUNC Camera(float vfov, float aspect) :
         origin(0, 0, 0.),

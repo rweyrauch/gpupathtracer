@@ -48,8 +48,8 @@ enum HitableTypeId
 class Hitable
 {
 public:
-    COMMON_FUNC Hitable() = default;
-    COMMON_FUNC virtual ~Hitable() = default;
+    COMMON_FUNC Hitable() {}
+    COMMON_FUNC virtual ~Hitable() {}
     COMMON_FUNC virtual bool hit(const Rayf& r, float t_min, float t_max, HitRecord& rec, RNG& rng) const = 0;
     COMMON_FUNC virtual bool bounds(float t0, float t1, AABB<float>& bbox) const = 0;
     COMMON_FUNC virtual float pdfValue(const Vector3f& o, const Vector3f& v, RNG& rng) const { return 0; }

@@ -16,7 +16,7 @@
 
 class HitableList : public Hitable {
 public:
-    COMMON_FUNC HitableList() = default;
+    COMMON_FUNC HitableList() {}
 
     COMMON_FUNC HitableList(int c, Hitable** l) :
         count(c),

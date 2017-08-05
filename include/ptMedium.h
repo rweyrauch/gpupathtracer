@@ -19,7 +19,7 @@
 class ConstantMedium : public Hitable
 {
 public:
-    COMMON_FUNC ConstantMedium() = default;
+    COMMON_FUNC ConstantMedium() {}
 
     COMMON_FUNC ConstantMedium(Hitable* b, float d, Texture* a) :
         boundary(b),

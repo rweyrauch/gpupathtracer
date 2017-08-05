@@ -19,7 +19,7 @@ template <typename T>
 class AABB
 {
 public:
-    COMMON_FUNC AABB() = default;
+    COMMON_FUNC AABB() {}
     COMMON_FUNC AABB(const Vector3<T>& a, const Vector3<T>& b) :
         m_min(a),
         m_max(b) {}
