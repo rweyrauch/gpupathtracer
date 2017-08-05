@@ -11,8 +11,10 @@
 #include <cuda.h>
 #include <iostream>
 #include <fstream>
-#include <cfloat>
+#include <thread>
 #include <vector>
+#include <algorithm>
+#include <unistd.h>
 #include "ptAABB.h"
 #include "ptRectangle.h"
 #include "ptRNG.h"
@@ -40,7 +42,6 @@
     AmbientLight* g_ambientLight = nullptr;
     Camera* g_cam = nullptr;
 #endif
-
 
 COMMON_FUNC Vector3f deNan(const Vector3f& c)
 {
@@ -167,7 +168,7 @@ COMMON_FUNC Vector3f render_pixel(Hitable** world, Hitable** lightShapes, int x,
     return accumCol;
 }
 
-__global__ void render_kernel(float3* pOutImage, Hitable** world, Hitable** lightShapes, int nx, int ny, int ns, int maxDepth)
+__global__ void render_kernel(float3* pOutImage, Hitable** world, Hitable** lightShapes, int nx, int ny, int ns, int maxDepth, int* progress)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -178,10 +179,14 @@ __global__ void render_kernel(float3* pOutImage, Hitable** world, Hitable** ligh
 
     unsigned int seed0 = x;  // seeds for random number generator
     unsigned int seed1 = y;
-    SimpleRng rng(seed0, seed1);
+    //SimpleRng rng(seed0, seed1);
+    PcgRng rng(i);
     Vector3f accumCol = render_pixel(world, lightShapes, x, y, nx, ny, ns, rng, maxDepth);
 
     pOutImage[i] = make_float3(accumCol[0], accumCol[1], accumCol[2]);
+
+    if (progress != nullptr)
+        atomicAdd(progress, 1);
 }
 
 COMMON_FUNC void simple_spheres(Hitable** world, Hitable** lightShapes, float aspect)
@@ -423,7 +428,7 @@ COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
 
 __global__ void allocate_world_kernel(Hitable** world, Hitable** lightShapes, float aspect)
 {
-    final(world, lightShapes, aspect);
+    cornell_box(world, lightShapes, aspect);
 }
 
 void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, int ny)
@@ -491,12 +496,16 @@ void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam
     }
 }
 
+void medianFilter3x3(Vector3f*, const Vector3f *, int, int);
+void medianFilter2x2(Vector3f*, const Vector3f *, int, int);
+
 int main(int argc, char** argv)
 {
     cxxopts::Options options("pathtracer", "Implementation of Peter Shirley's Raytracing in One Weekend book series.");
     options.add_options()
         ("q,quick", "Quick render.")
         ("c,cpu", "Render on CPU.")
+        ("m,median", "Apply median filter to output.")
         ("w,width", "Output width.", cxxopts::value<int>())
         ("h,height", "Output height.", cxxopts::value<int>())
         ("n,numsamples", "Number of sample rays per pixel.", cxxopts::value<int>())
@@ -511,6 +520,7 @@ int main(int argc, char** argv)
     int nx = 128 * 4;
     int ny = 128 * 4;
     bool cpu = options.count("cpu") > 0;
+    bool filter = options.count("median") > 0;
     int numThreads = 1;
     int maxDepth = 25;
 
@@ -564,15 +574,40 @@ int main(int argc, char** argv)
         dim3 block(8, 8, 1);
         dim3 grid(IDIVUP(nx, block.x), IDIVUP(ny, block.y), 1);
         std::cerr << "Rendering world...";
-        render_kernel<<<grid, block>>>(pOutImage, world, lightShapes, nx, ny, ns, maxDepth);
+
+        Progress progress(nx*ny, "PathTracers");
+
+        int* progressCounter;
+        cudaMallocManaged(&progressCounter, 4);
+        *progressCounter = 0;
+
+        auto progressFunc = [&progress, progressCounter](){
+            int previousValue = *progressCounter;
+            int delta = 0;
+            do
+            {
+                sleep(2);
+                int currentValue = *progressCounter;
+                delta = currentValue - previousValue;
+                previousValue = currentValue;
+            } while (!progress.update(delta));
+            //std::cout << "Progress thread exited." << std::endl;
+        };
+        std::thread progressThread(progressFunc);
+
+        render_kernel<<<grid, block>>>(pOutImage, world, lightShapes, nx, ny, ns, maxDepth, progressCounter);
         err = cudaDeviceSynchronize();
         std::cerr << "done" << std::endl;
+        progressThread.join();
+        progress.completed();
+
         if (err != cudaSuccess)
         {
             std::cerr << "Failed to render on GPU.  Error: " << cudaGetErrorName(err) << " Desc: " << cudaGetErrorString(err) << std::endl;
             return EXIT_FAILURE;
         }
 
+        cudaFree(progressCounter);
         cudaMemcpy(outImage, pOutImage, nx*ny*sizeof(Vector3f), cudaMemcpyDeviceToHost);
         cudaFree(pOutImage);
         cudaFree(lightShapes);
@@ -599,7 +634,7 @@ int main(int argc, char** argv)
 
         unsigned int seed0 = 42;
         unsigned int seed1 = 13;
-        DRandRng rng(seed0);//, seed1);
+        PcgRng rng(seed0);//, seed1);
 
         Progress progress(nx*ny, "PathTracers");
 
@@ -619,9 +654,111 @@ int main(int argc, char** argv)
         progress.completed();
     }
 
-    writeImage(outFile, outImage, nx, ny);
+    if (filter)
+    {
+        Vector3f *filteredImage = new Vector3f[nx * ny];
+        medianFilter3x3(filteredImage, outImage, nx, ny);
+        writeImage(outFile, filteredImage, nx, ny);
+        delete[] filteredImage;
+    }
+    else
+    {
+        writeImage(outFile, outImage, nx, ny);
+    }
+
     delete[] outImage;
+
     std::cerr << "Done." << std::endl;
 
     return EXIT_SUCCESS;
+}
+
+int compare(const void* pArg0, const void* pArg1)
+{
+    Vector3f val0 = *((Vector3f*)pArg0);
+    Vector3f val1 = *((Vector3f*)pArg1);
+
+    int result = 0;
+    auto v0 = val0.squared_length();
+    auto v1 = val1.squared_length();
+    if (v0 < v1)
+    {
+        result = -1;
+    }
+    else if (v0 > v1)
+    {
+        result = 1;
+    }
+    return result;
+}
+
+Vector3f median(Vector3f* pValues, size_t count)
+{
+    qsort(pValues, count, sizeof(Vector3f), compare);
+    return pValues[(count-1)/2];
+}
+
+void medianFilter3x3(Vector3f* output, const Vector3f *input, int nx, int ny)
+{
+    Vector3f hood[9];
+    Vector3f med(0, 0, 0);
+
+    for (int l = 0; l < ny; l++)
+    {
+        int l0 = std::max(0, l-1);
+        int l1 = l;
+        int l2 = std::min(ny-1, l+1);
+
+        for (int s = 0; s < nx; s++)
+        {
+            int s0 = std::max(0, s-1);
+            int s1 = s;
+            int s2 = std::min(nx-1, s+1);
+
+            hood[0] = input[l0*nx+s0]; //src(s0, l0);
+            hood[1] = input[l1*nx+s0]; //src(s0, l1);
+            hood[2] = input[l2*nx+s0]; //src(s0, l2);
+
+            hood[3] = input[l0*nx+s1]; //src(s1, l0);
+            hood[4] = input[l1*nx+s1]; //src(s1, l1);
+            hood[5] = input[l2*nx+s1]; //src(s1, l2);
+
+            hood[6] = input[l0*nx+s2]; //src(s2, l0);
+            hood[7] = input[l1*nx+s2]; //src(s2, l1);
+            hood[8] = input[l2*nx+s2]; //src(s2, l2);
+
+            med = median(hood, 9);
+
+            output[l*nx+s] = med;
+        }
+    }
+}
+
+
+void medianFilter2x2(Vector3f* output, const Vector3f *input, int nx, int ny)
+{
+    Vector3f hood[4];
+    Vector3f med(0, 0, 0);
+
+    for (int l = 0; l < ny; l++)
+    {
+        int l0 = std::max(0, l-1);
+        int l1 = l;
+
+        for (int s = 0; s < nx; s++)
+        {
+            int s0 = std::max(0, s-1);
+            int s1 = s;
+
+            hood[0] = input[l0*nx+s0]; //src(s0, l0);
+            hood[1] = input[l1*nx+s0]; //src(s0, l1);
+
+            hood[2] = input[l0*nx+s1]; //src(s1, l0);
+            hood[3] = input[l1*nx+s1]; //src(s1, l1);
+
+            med = median(hood, 4);
+
+            output[l*nx+s] = med;
+        }
+    }
 }

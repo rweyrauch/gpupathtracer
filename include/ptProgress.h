@@ -14,7 +14,10 @@ public:
 
     ~Progress();
 
-    void update(int numIterations = 1, float value = 0.0f);
+    bool update(int numIterations = 1, float value = 0.0f);
+
+    int totalIterations() const { return m_totalIterations; }
+    int iterationsCompleted() const { return m_iterationsCompleted; }
 
     void completed();
 

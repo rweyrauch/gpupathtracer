@@ -49,7 +49,7 @@ Progress::~Progress()
     delete[] m_buf;
 }
 
-void Progress::update(int numIterations, float value)
+bool Progress::update(int numIterations, float value)
 {
     m_iterationsCompleted += numIterations;
     float percentDone = static_cast<float>(m_iterationsCompleted) / static_cast<float>(m_totalIterations);
@@ -86,6 +86,8 @@ void Progress::update(int numIterations, float value)
             fprintf(stdout, " (%3d:%02d:%02ds|%3d:%02d:%02ds) %s=%6.2f", hours, minutes, seconds, estHours, estMinutes, std::max(0, estSeconds), m_statusLabel.c_str(), value);
     }
     fflush(stdout);
+
+    return (m_iterationsCompleted >= m_totalIterations);
 }
 
 void Progress::completed()
@@ -105,4 +107,6 @@ void Progress::completed()
     fprintf(stdout, " (%3d:%02d:%02ds)           \n", hours, minutes, seconds);
     fflush(stdout);
     system("tput cnorm");
+
+    m_iterationsCompleted = m_totalIterations;
 }

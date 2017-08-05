@@ -11,6 +11,7 @@
 
 #include <cstdlib>
 #include <math_constants.h>
+#include <math_functions.h>
 #include "ptCudaCommon.h"
 #include "ptVector3.h"
 #include "ptStream.h"
@@ -84,7 +85,52 @@ public:
     {
         return false;
     }
+};
 
+/*!
+ * PCG random number generator.
+ *
+ * http://www.pcg-random.org/
+ *
+ */
+class PcgRng : public RNG
+{
+    const float OneMinusEpsilon = 0.99999994f;
+
+public:
+    COMMON_FUNC PcgRng(uint64_t seed)
+    {
+        state = 0u;
+        inc = (seed << 1u) | 1u;
+        uniformUInt32();
+        state += 0x853c49e6748fea9bULL;
+        uniformUInt32();
+    }
+
+    COMMON_FUNC float rand() override
+    {
+        return Min(OneMinusEpsilon, (uniformUInt32() * 2.3283064365386963e-10f));
+    }
+
+    COMMON_FUNC bool serialize(Stream* pStream) const override
+    {
+        return false;
+    }
+
+private:
+
+    COMMON_FUNC uint32_t uniformUInt32()
+    {
+        uint64_t oldstate = state;
+        // Advance internal state
+        state = oldstate * 0x5851f42d4c957f2dULL + inc;
+        // Calculate output function (XSH RR), uses old state for max ILP
+        uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+        uint32_t rot = (uint32_t)(oldstate >> 59u);
+        return (xorshifted >> rot) | (xorshifted << ((~rot + 1u) & 31));
+    }
+private:
+    uint64_t state, inc;
 };
 
 
