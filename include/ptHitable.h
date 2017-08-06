@@ -42,7 +42,9 @@ enum HitableTypeId
   TranslateTypeId = MakeFourCC('T','R','A','N'),
   RotateYTypeId = MakeFourCC('R','O','T','Y'),
   MediumTypeId = MakeFourCC('C','M','E','D'),
-  BVHTypeId = MakeFourCC('B','V','H',' ')
+  BVHTypeId = MakeFourCC('B','V','H',' '),
+  TriangleTypeId = MakeFourCC('T','R','I',' '),
+  TriMeshTypeId = MakeFourCC('M','E','S','H')
 };
 
 class Hitable

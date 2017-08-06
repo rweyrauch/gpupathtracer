@@ -32,6 +32,7 @@ set(GPU_SOURCE_FILES
         include/ptRNG.h
         include/ptSphere.h
         include/ptTexture.h
+        include/ptTriangle.h
         include/ptVector2.h
         include/ptVector3.h
         include/ptProgress.h
@@ -51,6 +52,7 @@ set(GPU_SOURCE_FILES
         src/ptRectangle.cu
         src/ptSphere.cu
         src/ptTexture.cu
+        src/ptTriangle.cu
         src/ptMain.cu)
 
 set(CUDA_NVCC_FLAGS "-use_fast_math")
@@ -59,6 +61,6 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11)
 set(CUDA_SEPARABLE_COMPILATION ON)
 
-set(CUDA_NVCC_FLAGS_DEBUG "-G")
+#set(CUDA_NVCC_FLAGS_DEBUG "-G")
 
 cuda_add_executable(gpupathtracer ${GPU_SOURCE_FILES})
