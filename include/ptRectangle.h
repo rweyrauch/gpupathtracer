@@ -167,7 +167,10 @@ public:
 
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
-        ok |= hitable->serialize(pStream);
+        if (hitable != nullptr)
+            ok |= hitable->serialize(pStream);
+        else
+            ok |= pStream->writeNull();
 
         return ok;
     }
@@ -228,15 +231,12 @@ public:
         bool ok = pStream->write(&id, sizeof(id));
         ok |= pmin.serialize(pStream);
         ok |= pmax.serialize(pStream);
+
         if (child != nullptr)
-        {
             ok |= child->serialize(pStream);
-        }
         else
-        {
-            const int nullId = -1;
-            pStream->write(&nullId, sizeof(nullId));
-        }
+            ok |= pStream->writeNull();
+
         return ok;
     }
 
@@ -297,15 +297,12 @@ public:
 
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
+
         if (hitable != nullptr)
-        {
             ok |= hitable->serialize(pStream);
-        }
         else
-        {
-            const int nullId = -1;
-            pStream->write(&nullId, sizeof(nullId));
-        }
+            ok |= pStream->writeNull();
+
         ok |= offset.serialize(pStream);
 
         return ok;
@@ -317,7 +314,7 @@ public:
             return false;
 
         hitable = Hitable::Create(pStream);
-        bool ok = offset.serialize(pStream);
+        bool ok = offset.deserialize(pStream);
 
         return ok;
     }
@@ -409,17 +406,14 @@ public:
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
         if (hitable != nullptr)
-        {
             ok |= hitable->serialize(pStream);
-        }
         else
-        {
-            const int nullId = -1;
-            pStream->write(&nullId, sizeof(nullId));
-        }
+            ok |= pStream->writeNull();
+
         ok |= pStream->write(&sinTheta, sizeof(sinTheta));
         ok |= pStream->write(&cosTheta, sizeof(cosTheta));
-        ok |= pStream->write(&hasBox, sizeof(hasBox));
+        const int boxFlag = hasBox ? 1 : 0;
+        ok |= pStream->write(&boxFlag, sizeof(boxFlag));
         ok |= bbox.serialize(pStream);
 
         return ok;
@@ -433,7 +427,9 @@ public:
         hitable = Hitable::Create(pStream);
         bool ok = pStream->read(&sinTheta, sizeof(sinTheta));
         ok |= pStream->read(&cosTheta, sizeof(cosTheta));
-        ok |= pStream->read(&hasBox, sizeof(hasBox));
+        int boxFlag;
+        ok |= pStream->read(&boxFlag, sizeof(boxFlag));
+        hasBox = (boxFlag != 0);
         ok |= bbox.deserialize(pStream);
 
         return ok;

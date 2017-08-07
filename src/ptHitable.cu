@@ -7,6 +7,7 @@
  * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
  */
 #include <ptBVH.h>
+#include <ptTriangle.h>
 #include "ptHitable.h"
 #include "ptHitableList.h"
 #include "ptSphere.h"
@@ -61,6 +62,12 @@ COMMON_FUNC Hitable *Hitable::Create(Stream *pStream)
             break;
         case BVHTypeId:
             hitable = new BVH();
+            break;
+        case TriangleTypeId:
+            hitable = new Triangle();
+            break;
+        case TriMeshTypeId:
+            hitable = new TriangleMesh();
             break;
         default:
             return nullptr;

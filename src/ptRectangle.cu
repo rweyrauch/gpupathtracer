@@ -34,7 +34,10 @@ bool XYRectangle::serialize(Stream *pStream) const
 
     const int id = typeId();
     bool ok = pStream->write(&id, sizeof(id));
-    ok |= material->serialize(pStream);
+    if (material != nullptr)
+        ok |= material->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
     ok |= pStream->write(&x0, sizeof(x0));
     ok |= pStream->write(&x1, sizeof(x1));
     ok |= pStream->write(&y0, sizeof(y0));
@@ -85,7 +88,10 @@ bool XZRectangle::serialize(Stream *pStream) const
 
     const int id = typeId();
     bool ok = pStream->write(&id, sizeof(id));
-    ok |= material->serialize(pStream);
+    if (material != nullptr)
+        ok |= material->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
     ok |= pStream->write(&x0, sizeof(x0));
     ok |= pStream->write(&x1, sizeof(x1));
     ok |= pStream->write(&z0, sizeof(z0));
@@ -136,7 +142,10 @@ bool YZRectangle::serialize(Stream *pStream) const
 
     const int id = typeId();
     bool ok = pStream->write(&id, sizeof(id));
-    ok |= material->serialize(pStream);
+    if (material != nullptr)
+        ok |= material->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
     ok |= pStream->write(&y0, sizeof(y0));
     ok |= pStream->write(&y1, sizeof(y1));
     ok |= pStream->write(&z0, sizeof(z0));

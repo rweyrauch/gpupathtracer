@@ -10,6 +10,7 @@
 #include "ptQuickSort.h"
 #include "ptRNG.h"
 #include "ptBVH.h"
+#include "ptHitable.h"
 
 BVH::BVH(Hitable** list, int length, float time0, float time1, RNG& rng)
 {
@@ -98,10 +99,17 @@ bool BVH::serialize(Stream *pStream) const
     if (pStream != nullptr)
         return false;
 
-    const int id = typeId();
-    bool ok = pStream->write(&id, sizeof(id));
-    ok |= left->serialize(pStream);
-    ok |= right->serialize(pStream);
+    bool ok = true;
+    if (left != nullptr)
+        ok |= left->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
+
+    if (right != nullptr)
+        ok |= right->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
+
     ok |= m_bbox.serialize(pStream);
 
     return ok;
@@ -113,26 +121,9 @@ bool BVH::deserialize(Stream *pStream)
         return false;
 
     bool ok = true;
-    if (left != nullptr)
-    {
-        ok |= left->serialize(pStream);
-    }
-    else
-    {
-        const int nullId = -1;
-        pStream->write(&nullId, sizeof(nullId));
-    }
-    if (right != nullptr)
-    {
-        ok |= right->serialize(pStream);
-    }
-    else
-    {
-        const int nullId = -1;
-        pStream->write(&nullId, sizeof(nullId));
-    }
-
-    ok |= m_bbox.serialize(pStream);
+    left = Hitable::Create(pStream);
+    right = Hitable::Create(pStream);
+    ok |= m_bbox.deserialize(pStream);
 
     return ok;
 }

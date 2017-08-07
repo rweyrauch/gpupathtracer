@@ -8,7 +8,7 @@
  */
 
 #include "ptCudaCommon.h"
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <iostream>
 #include <fstream>
 #include <thread>
@@ -286,7 +286,7 @@ COMMON_FUNC void random_scene(Hitable** world, Hitable** lightShapes, float aspe
     *lightShapes = nullptr;
 }
 
-COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShapes, float aspect)
+COMMON_FUNC void cornell_box(float aspect, Hitable **world, Hitable** lightShapes, Camera** camera, AmbientLight** ambientLight)
 {
     int i = 0;
     Hitable **list = new Hitable*[8];
@@ -312,10 +312,9 @@ COMMON_FUNC void cornell_box(Hitable **world, Hitable** lightShapes, float aspec
     const Vector3f lookAt(278, 278, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    *camera = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
-    delete g_ambientLight;
-    g_ambientLight = new SkyAmbient();
+    *ambientLight = new ConstantAmbient();
 
     *lightShapes = new XZRectangle(213, 343, 227, 332, 554, NULL);
 }
@@ -414,7 +413,7 @@ COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
     {
         boxList2[j] = new Sphere(Vector3f(165*rng.rand(), 165*rng.rand(), 165*rng.rand()), 10, white);
     }
-    list[i++] = new Translate(new RotateY(new BVH(boxList2, ns, 0.0f, 1.0f, rng), 15), Vector3f(-100, 270, 395));
+    //list[i++] = new Translate(new RotateY(new BVH(boxList2, ns, 0.0f, 1.0f, rng), 15), Vector3f(-100, 270, 395));
 
     *lightShapes = new XZRectangle(123, 423, 147, 412, 554, nullptr);
     //lights.push_back(new Sphere(Vector3(360, 150, 145), 70, nullptr));
@@ -426,9 +425,13 @@ COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
     *world = new HitableList(i, list);
 }
 
-__global__ void allocate_world_kernel(Hitable** world, Hitable** lightShapes, float aspect)
+__global__ void allocate_world_kernel(Hitable** world, Hitable** lightShapes, void* pData, size_t dataSize)
 {
-    cornell_box(world, lightShapes, aspect);
+    Stream stream(pData, dataSize);
+    *world = Hitable::Create(&stream);
+    *lightShapes = Hitable::Create(&stream);
+    g_cam = Camera::Create(&stream);
+    g_ambientLight = AmbientLight::Create(&stream);
 }
 
 void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, int ny)
@@ -488,7 +491,7 @@ void writeImage(const std::string& outFile, const Vector3f* outImage, int nx, in
     }
 }
 
-void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Camera& cam, Hitable* world, Hitable* lightShapes, RNG& rng, int maxDepth)
+void renderLine(int line, Vector3f* outLine, int nx, int ny, int ns, Hitable* world, Hitable* lightShapes, RNG& rng, int maxDepth)
 {
     for (int x = 0; x < nx; x++)
     {
@@ -511,6 +514,7 @@ int main(int argc, char** argv)
         ("n,numsamples", "Number of sample rays per pixel.", cxxopts::value<int>())
         ("t,threads", "Number of render threads.", cxxopts::value<int>())
         ("d,maxdepth", "Maximum ray bounces.", cxxopts::value<int>())
+        ("s,stacksize", "Size of GPU thread stack (bytes)", cxxopts::value<int>())
         ("f,file", "Output filename.", cxxopts::value<std::string>());
 
     options.parse(argc, argv);
@@ -523,6 +527,7 @@ int main(int argc, char** argv)
     bool filter = options.count("median") > 0;
     int numThreads = 1;
     int maxDepth = 25;
+    int threadStackSize = -1; // default
 
     std::string outFile("outputImage.ppm");
 
@@ -538,6 +543,8 @@ int main(int argc, char** argv)
         outFile = options["file"].as<std::string>();
     if (options.count("threads"))
         numThreads = options["numthreads"].as<int>();
+    if (options.count("stacksize"))
+        threadStackSize = options["stacksize"].as<int>();
 
     if (quick)
     {
@@ -548,21 +555,51 @@ int main(int argc, char** argv)
 
     const float aspect = float(nx)/float(ny);
 
-    Vector3f* outImage = new Vector3f[nx * ny];
+    std::vector<Vector3f> outImage(nx*ny);
 
+    Hitable* world = nullptr;
+    Hitable* lightShapes = nullptr;
+    Camera* camera = nullptr;
+    AmbientLight* ambientLight = nullptr;
+    cornell_box(aspect, &world, &lightShapes, &camera, &ambientLight);// cornellBox(); // simpleLight(); //randomScene(); //
+    Stream* pStream = new Stream();
+    pStream->create(1024 * 1024 * 16);
+
+    bool ok = world->serialize(pStream);
+    ok |= lightShapes->serialize(pStream);
+    ok |= camera->serialize(pStream);
+    ok |= ambientLight->serialize(pStream);
+
+    if (!ok)
+    {
+        std::cerr << "Failed to serialize world to GPU memory." << std::endl;
+        return EXIT_FAILURE;
+    }
     if (!cpu)
     {
-        float3* pOutImage = NULL;
+        size_t stackSize;
+        cudaDeviceGetLimit(&stackSize, cudaLimitStackSize);
+        std::cout << "Max stack size: " << stackSize << std::endl;
+
+        if (threadStackSize > 0)
+        {
+            cudaDeviceSetLimit(cudaLimitStackSize, threadStackSize);
+
+            cudaDeviceGetLimit(&stackSize, cudaLimitStackSize);
+            std::cout << "New Max stack size: " << stackSize << std::endl;
+        }
+
+        float3* pOutImage = nullptr;
         cudaMalloc(&pOutImage, nx * ny * sizeof(float3));
 
-        Hitable** world = NULL;
+        Hitable** world = nullptr;
         cudaMalloc(&world, sizeof(Hitable**));
 
         Hitable** lightShapes = NULL;
         cudaMalloc(&lightShapes, sizeof(Hitable**));
 
         std::cerr << "Allocating world...";
-        allocate_world_kernel<<<1, 1>>>(world, lightShapes, aspect);
+        allocate_world_kernel<<<1, 1>>>(world, lightShapes, pStream->data(), pStream->size());
         cudaError_t err = cudaDeviceSynchronize();
         std::cerr << "done" << std::endl;
         if (err != cudaSuccess)
@@ -591,14 +628,14 @@ int main(int argc, char** argv)
                 delta = currentValue - previousValue;
                 previousValue = currentValue;
             } while (!progress.update(delta));
-            //std::cout << "Progress thread exited." << std::endl;
+            std::cout << "Progress thread exited." << std::endl;
         };
-        std::thread progressThread(progressFunc);
+        //std::thread progressThread(progressFunc);
 
         render_kernel<<<grid, block>>>(pOutImage, world, lightShapes, nx, ny, ns, maxDepth, progressCounter);
         err = cudaDeviceSynchronize();
         std::cerr << "done" << std::endl;
-        progressThread.join();
+        //progressThread.join();
         progress.completed();
 
         if (err != cudaSuccess)
@@ -608,30 +645,16 @@ int main(int argc, char** argv)
         }
 
         cudaFree(progressCounter);
-        cudaMemcpy(outImage, pOutImage, nx*ny*sizeof(Vector3f), cudaMemcpyDeviceToHost);
+        cudaMemcpy(outImage.data(), pOutImage, nx*ny*sizeof(Vector3f), cudaMemcpyDeviceToHost);
         cudaFree(pOutImage);
         cudaFree(lightShapes);
         cudaFree(world);
     }
     else
     {
-        Camera cam;
-        Hitable* world = NULL;
-        Hitable* lightShapes = NULL;
-        final(&world, &lightShapes, aspect);// cornellBox(); // simpleLight(); //randomScene(); //
-
-        Stream* pStream = new Stream();
-        pStream->create(1024 * 1024 * 16);
-
-        Hitable* pSphere = new Sphere(Vector3f(0, 1, 2), 3, new Lambertian(new ConstantTexture(Vector3f(0.5, 0.7, 0.9))));
-        bool ok = world->serialize(pStream);
-        if (ok)
-        {
-            Hitable* clone = Hitable::Create(pStream);
-        }
-        pStream->close();
-        delete pStream;
-
+        Hitable* clonedWorld = Hitable::Create(pStream);
+        g_ambientLight = ambientLight;
+        g_cam = camera;
         unsigned int seed0 = 42;
         unsigned int seed1 = 13;
         PcgRng rng(seed0);//, seed1);
@@ -641,9 +664,9 @@ int main(int argc, char** argv)
         #pragma omp parallel for if(numThreads)
         for (int j = 0; j < ny; j++)
         {
-            Vector3f* outLine = outImage + (nx * j);
+            Vector3f* outLine = outImage.data() + (nx * j);
             const int line = ny - j - 1;
-            renderLine(line, outLine, nx, ny, ns, cam, world, lightShapes, rng, maxDepth);
+            renderLine(line, outLine, nx, ny, ns, clonedWorld, lightShapes, rng, maxDepth);
 
             #pragma omp critical(progress)
             {
@@ -654,19 +677,19 @@ int main(int argc, char** argv)
         progress.completed();
     }
 
+    pStream->close();
+    delete pStream;
+
     if (filter)
     {
-        Vector3f *filteredImage = new Vector3f[nx * ny];
-        medianFilter3x3(filteredImage, outImage, nx, ny);
-        writeImage(outFile, filteredImage, nx, ny);
-        delete[] filteredImage;
+        std::vector<Vector3f> filteredImage(nx * ny);
+        medianFilter3x3(filteredImage.data(), outImage.data(), nx, ny);
+        writeImage(outFile, filteredImage.data(), nx, ny);
     }
     else
     {
-        writeImage(outFile, outImage, nx, ny);
+        writeImage(outFile, outImage.data(), nx, ny);
     }
-
-    delete[] outImage;
 
     std::cerr << "Done." << std::endl;
 

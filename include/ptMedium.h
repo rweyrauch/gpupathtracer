@@ -66,7 +66,11 @@ public:
 
         const int id = typeId();
         bool ok = pStream->write(&id, sizeof(id));
-        ok |= boundary->serialize(pStream);
+        if (boundary != nullptr)
+            ok |= boundary->serialize(pStream);
+        else
+            ok |= pStream->writeNull();
+
         ok |= pStream->write(&density, sizeof(density));
         ok |= phaseFunction->serialize(pStream);
 

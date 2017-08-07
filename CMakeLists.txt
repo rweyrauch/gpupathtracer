@@ -45,6 +45,7 @@ set(GPU_SOURCE_FILES
         src/ptAmbientLight.cu
         src/ptNoise.cu
         src/ptBVH.cu
+        src/ptCamera.cu
         src/ptHitable.cu
         src/ptHitableList.cu
         src/ptMaterial.cu
@@ -61,6 +62,8 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11)
 set(CUDA_SEPARABLE_COMPILATION ON)
 
-#set(CUDA_NVCC_FLAGS_DEBUG "-G")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CUDA_NVCC_FLAGS_DEBUG "-G")
+endif()
 
 cuda_add_executable(gpupathtracer ${GPU_SOURCE_FILES})

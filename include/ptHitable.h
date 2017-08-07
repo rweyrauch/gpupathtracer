@@ -31,20 +31,21 @@ struct HitRecord
 
 enum HitableTypeId
 {
-  ListTypeId = MakeFourCC('L','I','S','T'),
-  SphereTypeId = MakeFourCC('S','P', 'H', 'E'),
-  MovingSphereTypeId = MakeFourCC('M','S','P','H'),
-  XYRectangleTypeId = MakeFourCC('X','Y','R','E'),
-  XZRectangleTypeId = MakeFourCC('X','Z','R','E'),
-  YZRectangleTypeId = MakeFourCC('Y','Z','R','E'),
-  FlipNormalsTypeId = MakeFourCC('F','L','I','P'),
-  BoxTypeId = MakeFourCC('B','O','X','H'),
-  TranslateTypeId = MakeFourCC('T','R','A','N'),
-  RotateYTypeId = MakeFourCC('R','O','T','Y'),
-  MediumTypeId = MakeFourCC('C','M','E','D'),
-  BVHTypeId = MakeFourCC('B','V','H',' '),
-  TriangleTypeId = MakeFourCC('T','R','I',' '),
-  TriMeshTypeId = MakeFourCC('M','E','S','H')
+  NullTypeId = -1,
+  ListTypeId = 1, //MakeFourCC('L','I','S','T'),
+  SphereTypeId, // = MakeFourCC('S','P', 'H', 'E'),
+  MovingSphereTypeId, // = MakeFourCC('M','S','P','H'),
+  XYRectangleTypeId, // = MakeFourCC('X','Y','R','E'),
+  XZRectangleTypeId, // = MakeFourCC('X','Z','R','E'),
+  YZRectangleTypeId, // = MakeFourCC('Y','Z','R','E'),
+  FlipNormalsTypeId, // = MakeFourCC('F','L','I','P'),
+  BoxTypeId, //= MakeFourCC('B','O','X','H'),
+  TranslateTypeId, // = MakeFourCC('T','R','A','N'),
+  RotateYTypeId, // = MakeFourCC('R','O','T','Y'),
+  MediumTypeId, // = MakeFourCC('C','M','E','D'),
+  BVHTypeId, // = MakeFourCC('B','V','H',' '),
+  TriangleTypeId, // = MakeFourCC('T','R','I',' '),
+  TriMeshTypeId // = MakeFourCC('M','E','S','H')
 };
 
 class Hitable

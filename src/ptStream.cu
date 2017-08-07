@@ -18,7 +18,10 @@ Stream::Stream()
 
 Stream::~Stream()
 {
-    close();
+#ifndef __CUDA_ARCH__
+    if (ownBuffer)
+        close();
+#endif
 }
 
 bool Stream::create(size_t size)
@@ -63,6 +66,12 @@ bool Stream::write(const void* pData, size_t size)
     writeOffset += size;
 
     return true;
+}
+
+bool Stream::writeNull()
+{
+    int nullId = -1;
+    return write(&nullId, sizeof(nullId));
 }
 
 bool Stream::read(void* pData, size_t size)

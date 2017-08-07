@@ -97,8 +97,7 @@ public:
         }
         else
         {
-            const int nullId = -1;
-            ok |= pStream->write(&nullId, sizeof(nullId));
+            ok |= pStream->writeNull();
         }
 
         return ok;
@@ -285,8 +284,7 @@ public:
         }
         else
         {
-            const int nullId = -1;
-            pStream->write(&nullId, sizeof(nullId));
+            ok |= pStream->writeNull();
         }
 
         return ok;
@@ -344,8 +342,7 @@ public:
         }
         else
         {
-            const int nullId = -1;
-            pStream->write(&nullId, sizeof(nullId));
+            ok |= pStream->writeNull();
         }
 
         return ok;

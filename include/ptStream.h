@@ -21,18 +21,29 @@ class Stream
 {
 public:
     COMMON_FUNC Stream();
-    virtual ~Stream();
+    COMMON_FUNC Stream(void* pData, size_t size) :
+        pBuffer(pData),
+        bufferSize(size),
+        ownBuffer(false) {}
+
+    COMMON_FUNC ~Stream();
 
     bool create(size_t size);
     bool close();
 
     COMMON_FUNC bool write(const void* pData, size_t size);
+    COMMON_FUNC bool writeNull();
+
     COMMON_FUNC bool read(void* pData, size_t size);
+
+    COMMON_FUNC void* data() { return pBuffer; }
+    COMMON_FUNC size_t size() const { return bufferSize; }
 
 private:
 
     void* pBuffer = nullptr;
     size_t bufferSize = 0;
+    bool ownBuffer = true;
     size_t writeOffset = 0;
     size_t readOffset = 0;
 };

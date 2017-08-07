@@ -19,6 +19,7 @@
 class Triangle : public Hitable
 {
 public:
+    COMMON_FUNC Triangle() {}
     COMMON_FUNC Triangle(const Vector3f& v0, const Vector2f& t0,
              const Vector3f& v1, const Vector2f& t1,
              const Vector3f& v2, const Vector2f& t2,
@@ -60,6 +61,7 @@ struct TriIndex
 class TriangleMesh : public Hitable
 {
 public:
+    COMMON_FUNC TriangleMesh() {}
     COMMON_FUNC explicit TriangleMesh(Material* mtl) :
         material(mtl) { }
 
