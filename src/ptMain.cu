@@ -189,7 +189,7 @@ __global__ void render_kernel(float3* pOutImage, Hitable** world, Hitable** ligh
         atomicAdd(progress, 1);
 }
 
-COMMON_FUNC void simple_spheres(Hitable** world, Hitable** lightShapes, float aspect)
+COMMON_FUNC void simple_spheres(float aspect, Hitable **world, Hitable** lightShapes, Camera** camera, AmbientLight** ambientLight)
 {
     int i = 0;
     Hitable** list = new Hitable*[4];
@@ -201,19 +201,18 @@ COMMON_FUNC void simple_spheres(Hitable** world, Hitable** lightShapes, float as
     *world = new HitableList(i, list);
     *lightShapes = nullptr;
 
-    g_cam = new Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
+    *camera = new Camera(Vector3f(-2, 2, 1), Vector3f(0, 0, -1), Vector3f(0, 1, 0), 90, aspect, 0.0f, 10.0f);
 
-    delete g_ambientLight;
-    g_ambientLight = new SkyAmbient();
+    *ambientLight = new SkyAmbient();
 }
 
-COMMON_FUNC void simple_light(Hitable** world, Hitable** lightShapes, float aspect)
+COMMON_FUNC void simple_light(float aspect, Hitable **world, Hitable** lightShapes, Camera** camera, AmbientLight** ambientLight)
 {
     const Vector3f lookFrom(13, 2, 3);
     const Vector3f lookAt(0, 0, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    *camera = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
     Texture* noise = new NoiseTexture(1.0f);
     int i = 0;
@@ -228,20 +227,19 @@ COMMON_FUNC void simple_light(Hitable** world, Hitable** lightShapes, float aspe
     lights[0] = new Sphere(Vector3f(0, 7, 0), 2, nullptr);
     lights[1] = new XYRectangle(3, 5, 1, 3, -2, nullptr);
 
-    delete g_ambientLight;
-    g_ambientLight = new ConstantAmbient();
+    *ambientLight = new ConstantAmbient();
 
     *world = new HitableList(i, list);
     *lightShapes = new HitableList(2, lights);
 }
 
-COMMON_FUNC void random_scene(Hitable** world, Hitable** lightShapes, float aspect)
+COMMON_FUNC void random_scene(float aspect, Hitable **world, Hitable** lightShapes, Camera** camera, AmbientLight** ambientLight)
 {
     const Vector3f lookFrom(13, 2, 3);
     const Vector3f lookAt(0, 0, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 20, aspect, aperture, dist_to_focus, 0.0, 1.0);
+    *camera = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 20, aspect, aperture, dist_to_focus, 0.0, 1.0);
 
     SimpleRng rng(42, 13);
 
@@ -279,8 +277,7 @@ COMMON_FUNC void random_scene(Hitable** world, Hitable** lightShapes, float aspe
     list[i++] = new Sphere(Vector3f(-4, 1, 0), 1.0, new Lambertian(new ConstantTexture(Vector3f(0.4, 0.2, 0.1))));
     list[i++] = new Sphere(Vector3f(4, 1, 0), 1.0, new Metal(Vector3f(0.7, 0.6, 0.5), 0.0));
 
-    delete g_ambientLight;
-    g_ambientLight = new SkyAmbient();
+    *ambientLight = new SkyAmbient();
 
     *world = new HitableList(i, list);
     *lightShapes = nullptr;
@@ -319,7 +316,7 @@ COMMON_FUNC void cornell_box(float aspect, Hitable **world, Hitable** lightShape
     *lightShapes = new XZRectangle(213, 343, 227, 332, 554, NULL);
 }
 
-COMMON_FUNC void cornell_box_spheres(Hitable **world, Hitable** lightShapes, float aspect)
+COMMON_FUNC void cornell_box_spheres(float aspect, Hitable **world, Hitable** lightShapes, Camera** camera, AmbientLight** ambientLight)
 {
     int i = 0;
     Hitable **list = new Hitable*[8];
@@ -344,20 +341,19 @@ COMMON_FUNC void cornell_box_spheres(Hitable **world, Hitable** lightShapes, flo
     const Vector3f lookAt(278, 278, 0);
     const double dist_to_focus = 10.0;
     const double aperture = 0.0;
-    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    *camera = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
-    delete g_ambientLight;
-    g_ambientLight = new ConstantAmbient();
-
+    *ambientLight = new ConstantAmbient();
+    *lightShapes = nullptr;
 }
 
-COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
+COMMON_FUNC void final(float aspect, Hitable **world, Hitable** lightShapes, Camera** camera, AmbientLight** ambientLight)
 {
     const Vector3f lookFrom(478, 278, -600); //(278, 278, -800); //(13, 2, 3);
     const Vector3f lookAt(278, 278, 0); //(0, 1, 0);
     const float dist_to_focus = 10.0f;
     const float aperture = 0.0f;
-    g_cam = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
+    *camera = new Camera(lookFrom, lookAt, Vector3f(0, 1, 0), 40, aspect, aperture, dist_to_focus);
 
     int nb = 20;
 
@@ -419,8 +415,7 @@ COMMON_FUNC void final(Hitable **world, Hitable** lightShapes, float aspect)
     //lights.push_back(new Sphere(Vector3(360, 150, 145), 70, nullptr));
     //lights.push_back(new Sphere(Vector3(0, 0, 0), 5000, nullptr));
 
-    delete g_ambientLight;
-    g_ambientLight = new ConstantAmbient();
+    *ambientLight = new ConstantAmbient();
 
     *world = new HitableList(i, list);
 }
@@ -561,14 +556,20 @@ int main(int argc, char** argv)
     Hitable* lightShapes = nullptr;
     Camera* camera = nullptr;
     AmbientLight* ambientLight = nullptr;
-    cornell_box(aspect, &world, &lightShapes, &camera, &ambientLight);// cornellBox(); // simpleLight(); //randomScene(); //
+    random_scene(aspect, &world, &lightShapes, &camera, &ambientLight);// cornellBox(); // simpleLight(); //randomScene(); //
     Stream* pStream = new Stream();
     pStream->create(1024 * 1024 * 16);
 
     bool ok = world->serialize(pStream);
-    ok |= lightShapes->serialize(pStream);
+    if (lightShapes != nullptr)
+        ok |= lightShapes->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
     ok |= camera->serialize(pStream);
-    ok |= ambientLight->serialize(pStream);
+    if (ambientLight != nullptr)
+        ok |= ambientLight->serialize(pStream);
+    else
+        ok |= pStream->writeNull();
 
     if (!ok)
     {
